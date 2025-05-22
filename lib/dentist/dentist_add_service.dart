@@ -82,10 +82,6 @@ class _DentistAddServiceState extends State<DentistAddService> {
                 const SizedBox(height: 10),
                 _buildTextField(
                     servPriceController, 'Service Price', Icons.price_change),
-                const SizedBox(height: 10),
-                _buildTextField(
-                    clinicController, 'Clinic ID', Icons.local_hospital,
-                    readOnly: true),
                 const SizedBox(height: 20),
                 _buildSignUpButton(),
               ],

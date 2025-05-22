@@ -141,7 +141,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
                               labelText: "Status",
                               border: OutlineInputBorder(),
                             ),
-                            items: ['approved', 'pending']
+                            items: ['active', 'inactive']
                                 .map((status) => DropdownMenuItem(
                                       value: status,
                                       child: Text(status),

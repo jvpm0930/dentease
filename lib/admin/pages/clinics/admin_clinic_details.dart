@@ -13,6 +13,8 @@ class AdmClinicDetailsPage extends StatefulWidget {
 
 class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
   final supabase = Supabase.instance.client;
+  final TextEditingController _noteController = TextEditingController();
+
   Map<String, dynamic>? clinicDetails;
   bool isLoading = true;
   String selectedStatus = 'pending'; // Default value
@@ -28,7 +30,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       final response = await supabase
           .from('clinics')
           .select(
-              'clinic_name, email, license_url, latitude, longitude, address, status')
+              'clinic_name, email, license_url, latitude, longitude, address, status, note')
           .eq('clinic_id', widget.clinicId)
           .maybeSingle();
 
@@ -38,7 +40,8 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
 
       setState(() {
         clinicDetails = response;
-        selectedStatus = response['status'] ?? 'pending'; // Set status
+        selectedStatus = response['status'] ?? 'pending';
+        _noteController.text = response['note'] ?? ''; // preload existing note
         isLoading = false;
       });
     } catch (e) {
@@ -67,6 +70,30 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
     }
   }
 
+  Future<void> _updateNote() async {
+    final noteText = _noteController.text.trim();
+    if (noteText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Note cannot be empty')),
+      );
+      return;
+    }
+
+    try {
+      await supabase
+          .from('clinics')
+          .update({'note': noteText}).eq('clinic_id', widget.clinicId);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Note sent successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending note: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,7 +109,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Clinic Name
                       Text(
                         clinicDetails!['clinic_name'] ?? '',
                         style: const TextStyle(
@@ -91,8 +117,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Clinic Status (Dropdown + Update Button)
                       Row(
                         children: [
                           const Icon(Icons.approval, color: Colors.indigo),
@@ -111,6 +135,10 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                                   child: Text('Pending'),
                                 ),
                                 DropdownMenuItem(
+                                  value: 'rejected',
+                                  child: Text('Rejected'),
+                                ),
+                                DropdownMenuItem(
                                   value: 'approved',
                                   child: Text('Approved'),
                                 ),
@@ -123,10 +151,30 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 16),
-
-                      // Clinic Email
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.note_alt, color: Colors.indigo),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _noteController,
+                              maxLines: null,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter note...',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _updateNote,
+                            child: const Text('Send Note'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           const Icon(Icons.email, color: Colors.indigo),
@@ -138,8 +186,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // Clinic Address
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -155,8 +201,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // Map View
                       if (clinicDetails!['latitude'] != null &&
                           clinicDetails!['longitude'] != null)
                         Column(
@@ -187,8 +231,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           ],
                         ),
                       const SizedBox(height: 16),
-
-                      // Clinic License Image
                       if (clinicDetails!['license_url'] != null)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +254,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                             ),
                           ],
                         ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),

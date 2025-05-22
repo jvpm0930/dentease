@@ -107,13 +107,10 @@ class _DentClinicPageState extends State<DentClinicPage> {
                                 ClinicFrontForDentStaff(
                                     clinicId: widget.clinicId),
                                 const SizedBox(height: 30),
-                                const Text(
-                                    "Above is Clinics Front Card In Patients Page"),
-                                const Text(
-                                    "click the image to change it"),
-                                const SizedBox(height: 10),
                                 _buildDetailRow('Status:',
                                     clinicDetails?['status'] ?? 'N/A'),
+                                _buildDetailRow('Note:',
+                                    clinicDetails?['note'] ?? 'N/A'),
                                 _buildDetailRow('Clinic Name:',
                                     clinicDetails?['clinic_name'] ?? 'N/A'),
                                 const SizedBox(height: 20),

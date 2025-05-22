@@ -144,7 +144,7 @@ class _DentistServListPageState extends State<DentistServListPage> {
                                 Text(
                                   "Status: ${service['status']}",
                                   style: TextStyle(
-                                    color: service['status'] == 'pending'
+                                    color: service['status'] == 'inactive'
                                         ? Colors.red
                                         : Colors.blue,
                                     fontWeight: FontWeight.bold,
