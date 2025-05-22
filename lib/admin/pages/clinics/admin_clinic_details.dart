@@ -111,10 +111,6 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                                   child: Text('Pending'),
                                 ),
                                 DropdownMenuItem(
-                                  value: 'rejected',
-                                  child: Text('Rejected'),
-                                ),
-                                DropdownMenuItem(
                                   value: 'approved',
                                   child: Text('Approved'),
                                 ),
