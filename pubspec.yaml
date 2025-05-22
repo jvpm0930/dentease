@@ -1,0 +1,76 @@
+name: dentease
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.1
+
+dependencies:
+  uuid: ^4.2.1
+  timeago: ^3.1.0
+  google_maps_flutter: ^2.11.0
+  http: ^0.13.6
+  provider: ^6.0.3
+  geolocator: 13.0.2
+  table_calendar: ^3.0.9
+  meta: 1.16.0
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.8.3
+  flutter_native_splash: ^2.4.4
+  image_picker: ^1.1.2
+  chat_supabase: ^1.1.0
+  geocoding: ^3.0.0
+  camera: ^0.10.5+9
+  path_provider: ^2.0.11
+  path: ^1.8.3
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"  # Background color for Android adaptive icon
+  adaptive_icon_foreground: "assets/app_icon.png" # Same as main icon
+
+flutter_native_splash:
+  background_image: assets/splash_background.png  # Background image
+  image: assets/logo.png  # Foreground logo (optional)
+  android: true
+  ios: true
+  android_12:
+    background_image: assets/splash_background.png
+    image: assets/logo.png
+    fullscreen: true
+
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/splash_background.png
+    - assets/background1.png
+    - assets/background2.png
+    - assets/logo.png
+    - assets/logo2.png
+    - assets/icons/scan.png
+    - assets/icons/chat.png
+    - assets/icons/calendar.png
+    - assets/icons/profile.png
+    - assets/icons/home.png
+    - assets/profile.png
+    - assets/clinic1.png
+    - assets/clinic2.png
+    - assets/clinic3.png
+    - assets/sample_disease.png
+    - assets/tooth_model.tflite
+    
