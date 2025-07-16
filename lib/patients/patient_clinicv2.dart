@@ -43,7 +43,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
           .from('services')
           .select('service_id, service_name, service_price')
           .eq('clinic_id', widget.clinicId)
-          .eq('status', 'approved'); // Only approved services
+          .eq('status', 'active'); 
       
       final response = await supabase
           .from('feedbacks')

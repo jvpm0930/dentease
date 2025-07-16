@@ -15,6 +15,7 @@ class ClinicPatientChatList extends StatefulWidget {
 class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
   final supabase = Supabase.instance.client;
   List<Map<String, dynamic>> patients = [];
+  Map<String, bool> hasNewMessages = {};
   bool isLoading = true;
 
   @override
@@ -23,7 +24,6 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
     fetchPatients();
   }
 
-  /// Fetches patients based on `clinic_id` from `bookings`, retrieving patient details from `patients` table
   Future<void> fetchPatients() async {
     try {
       final bookingResponse = await supabase
@@ -31,25 +31,40 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
           .select('patient_id')
           .eq('clinic_id', widget.clinicId);
 
-      final patientIds =
-          bookingResponse.map((booking) => booking['patient_id']).toList();
+      final patientIds = bookingResponse
+          .map((booking) => booking['patient_id'] as String)
+          .toList();
 
       if (patientIds.isEmpty) {
         setState(() {
           patients = [];
+          hasNewMessages = {}; // Ensure this is reset
           isLoading = false;
         });
         return;
       }
 
-      // Fetch patients from `patients` table based on patient_ids
       final patientResponse = await supabase
           .from('patients')
           .select('patient_id, firstname, email')
-          .inFilter('patient_id', patientIds); // Corrected filter
+          .inFilter('patient_id', patientIds);
+
+      final Map<String, bool> newMessagesMap = {};
+
+      for (var patientId in patientIds) {
+        final newMessageResponse = await supabase
+            .from('messages')
+            .select()
+            .eq('sender_id', patientId)
+            .eq('receiver_id', widget.clinicId)
+            .eq('read', false);
+
+        newMessagesMap[patientId] = newMessageResponse.isNotEmpty;
+      }
 
       setState(() {
         patients = List<Map<String, dynamic>>.from(patientResponse);
+        hasNewMessages = newMessagesMap; 
         isLoading = false;
       });
     } catch (e) {
@@ -61,6 +76,8 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
       );
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -122,8 +139,21 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
                               color: Colors.black54,
                             ),
                           ),
-                          trailing:
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
                               const Icon(Icons.chat_bubble, color: Colors.blue),
+                              if (hasNewMessages[patientId] == true)
+                                const Text(
+                                  'New message',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
                           onTap: () {
                             if (patientId != null) {
                               Navigator.push(

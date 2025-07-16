@@ -17,11 +17,11 @@ dependencies:
   meta: 1.16.0
   flutter:
     sdk: flutter
+  flutter_tflite: ^1.0.1
 
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.8.3
-  flutter_native_splash: ^2.4.4
-  image_picker: ^1.1.2
+  image_picker: ^0.8.9
   chat_supabase: ^1.1.0
   geocoding: ^3.0.0
   camera: ^0.10.5+9
@@ -33,25 +33,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.14.3
-
-flutter_icons:
-  android: true
-  ios: true
-  image_path: "assets/app_icon.png"
-  adaptive_icon_background: "#FFFFFF"  # Background color for Android adaptive icon
-  adaptive_icon_foreground: "assets/app_icon.png" # Same as main icon
-
-flutter_native_splash:
-  background_image: assets/splash_background.png  # Background image
-  image: assets/logo.png  # Foreground logo (optional)
-  android: true
-  ios: true
-  android_12:
-    background_image: assets/splash_background.png
-    image: assets/logo.png
-    fullscreen: true
-
+  flutter_launcher_icons: ^0.11.0
 
 flutter:
   uses-material-design: true
@@ -72,5 +54,7 @@ flutter:
     - assets/clinic2.png
     - assets/clinic3.png
     - assets/sample_disease.png
-    - assets/tooth_model.tflite
+    - assets/upload.jpg
+    - assets/model.tflite
+    - assets/labels.txt
     

@@ -33,14 +33,12 @@ class _DentClinicPageState extends State<DentClinicPage> {
   /// Fetch clinic details and the associated `dentist_id`
   Future<void> _fetchClinicDetails() async {
     try {
-      // Fetch clinic details
       final clinicResponse = await supabase
           .from('clinics')
           .select()
           .eq('clinic_id', widget.clinicId)
           .maybeSingle();
 
-      // Fetch `dentist_id` from dentists table
       final dentistResponse = await supabase
           .from('dentists')
           .select('dentist_id')
@@ -49,8 +47,7 @@ class _DentClinicPageState extends State<DentClinicPage> {
 
       setState(() {
         clinicDetails = clinicResponse;
-        dentistId =
-            dentistResponse?['dentist_id']; // Assign the fetched dentist_id
+        dentistId = dentistResponse?['dentist_id'];
         isLoading = false;
       });
     } catch (e) {
@@ -64,18 +61,28 @@ class _DentClinicPageState extends State<DentClinicPage> {
   }
 
   Widget _buildDetailRow(String label, String value) {
+    final isStatusRow = label.toLowerCase().contains('status');
+    final isRejected = value.toLowerCase() == 'rejected';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           Expanded(
-            child: Text(value,
-                textAlign: TextAlign.right,
-                style: const TextStyle(color: Colors.white, fontSize: 14)),
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: isStatusRow && isRejected ? Colors.red : Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ),
         ],
       ),
@@ -96,8 +103,10 @@ class _DentClinicPageState extends State<DentClinicPage> {
                 child: isLoading
                     ? const CircularProgressIndicator()
                     : clinicDetails == null
-                        ? const Text('No clinic details found.',
-                            style: TextStyle(fontSize: 14))
+                        ? const Text(
+                            'No clinic details found.',
+                            style: TextStyle(fontSize: 14),
+                          )
                         : SingleChildScrollView(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -109,14 +118,13 @@ class _DentClinicPageState extends State<DentClinicPage> {
                                 const SizedBox(height: 30),
                                 _buildDetailRow('Status:',
                                     clinicDetails?['status'] ?? 'N/A'),
-                                _buildDetailRow('Note:',
-                                    clinicDetails?['note'] ?? 'N/A'),
+                                _buildDetailRow(
+                                    'Note:', clinicDetails?['note'] ?? 'N/A'),
                                 _buildDetailRow('Clinic Name:',
                                     clinicDetails?['clinic_name'] ?? 'N/A'),
                                 const SizedBox(height: 20),
                                 ElevatedButton(
                                   onPressed: () {
-                                    // Navigate to DentClinicMore page
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -127,8 +135,7 @@ class _DentClinicPageState extends State<DentClinicPage> {
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Colors.blue, // Button color
+                                    backgroundColor: Colors.blue,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 30, vertical: 12),
                                     shape: RoundedRectangleBorder(
@@ -145,10 +152,11 @@ class _DentClinicPageState extends State<DentClinicPage> {
                           ),
               ),
             ),
-
-            // Dentist Footer (only if `dentistId` is fetched)
             if (dentistId != null)
-              DentistFooter(clinicId: widget.clinicId, dentistId: dentistId!),
+              DentistFooter(
+                clinicId: widget.clinicId,
+                dentistId: dentistId!,
+              ),
           ],
         ),
       ),
