@@ -1,5 +1,6 @@
 import 'package:dentease/patients/patient_booking_details.dart';
 import 'package:dentease/patients/patient_booking_pend.dart';
+import 'package:dentease/patients/patient_booking_rej.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -90,6 +91,25 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
                       child: const Text("Pending"),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PatientBookingRej(patientId: widget.patientId),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text("Rejected"),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -133,8 +153,11 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
                                 Text(
                                     "Clinic: ${booking['clinics']['clinic_name']}"),
                                 Text("Status: ${booking['status']}",
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold)),
+                                    style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                             trailing: GestureDetector(

@@ -1,6 +1,6 @@
 import 'package:dentease/clinic/dentease_booking_details.dart';
+import 'package:dentease/dentist/dentist_bookings_apprv.dart';
 import 'package:dentease/dentist/dentist_bookings_pend.dart';
-import 'package:dentease/dentist/dentist_bookings_rej.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,18 +11,17 @@ String formatDateTime(String dateTime) {
   return DateFormat('MMM d, y • h:mma').format(parsedDate).toLowerCase();
 }
 
-class DentistBookingApprvPage extends StatefulWidget {
+class DentistBookingRejPage extends StatefulWidget {
   final String dentistId;
   final String clinicId;
-  const DentistBookingApprvPage(
+  const DentistBookingRejPage(
       {super.key, required this.dentistId, required this.clinicId});
 
   @override
-  _DentistBookingApprvPageState createState() =>
-      _DentistBookingApprvPageState();
+  _DentistBookingRejPageState createState() => _DentistBookingRejPageState();
 }
 
-class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
+class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
   final supabase = Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> _bookingsFuture;
 
@@ -35,9 +34,10 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
   Future<List<Map<String, dynamic>>> _fetchBookings() async {
     final response = await supabase
         .from('bookings')
-        .select('booking_id, patient_id, service_id, clinic_id, date, status, patients(firstname, lastname, email, phone), services(service_name, service_price)')
-        .eq('status', 'approved')
-        .eq('clinic_id', widget.clinicId);
+        .select(
+            'booking_id, patient_id, service_id, clinic_id, date, status, patients(firstname), services(service_name)')
+        .or('status.eq.rejected')
+        .eq('clinic_id', widget.clinicId); // Filters bookings by clinicId
 
     return response;
   }
@@ -49,7 +49,7 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
-          "Approved Booking Request",
+          "Rejected Booking Request",
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
@@ -67,11 +67,19 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed:
-                        null, //  Disable the "Approved" button in this page
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DentistBookingApprvPage(
+                              clinicId: widget.clinicId,
+                              dentistId: widget.dentistId),
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[300], // Disabled background
-                      foregroundColor: Colors.white, // Disabled text color
+                      backgroundColor: Colors.blue, // Active color
+                      foregroundColor: Colors.white, // Active text color
                     ),
                     child: const Text("Approved"),
                   ),
@@ -79,7 +87,7 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
+                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
@@ -90,8 +98,8 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue, // Active color
-                      foregroundColor: Colors.white, // Active text color
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
                     ),
                     child: const Text("Pending"),
                   ),
@@ -99,16 +107,8 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                     onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DentistBookingRejPage(
-                              clinicId: widget.clinicId,
-                              dentistId: widget.dentistId),
-                        ),
-                      );
-                    },
+                    onPressed:
+                        null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue, // Active color
                       foregroundColor: Colors.white, // Active text color
@@ -129,19 +129,16 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No approved bookings"));
+                  return const Center(child: Text("No rejected bookings"));
                 }
 
                 final bookings = snapshot.data!;
 
-                return RefreshIndicator(
-                  onRefresh: _fetchBookings,
-                  child: ListView.builder(
-                    itemCount: bookings.length,
-                    itemBuilder: (context, index) {
-                      final booking = bookings[index];
-
-                      return Card(
+                return ListView.builder(
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    return Card(
                         margin: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         child: ListTile(
@@ -163,7 +160,7 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
                               Text("Status: ${booking['status']}",
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.blue)),
+                                      color: Colors.red)),
                             ],
                           ),
                           trailing: GestureDetector(
@@ -185,12 +182,11 @@ class _DentistBookingApprvPageState extends State<DentistBookingApprvPage> {
                           ),
                         ),
                       );
-                    },
-                  ),
+                  },
                 );
               },
             ),
-          )
+          ),
         ],
       ),
     ));

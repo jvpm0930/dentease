@@ -62,10 +62,7 @@ class _PatientProfileState extends State<PatientProfile> {
       backgroundColor: Colors.grey[300],
       backgroundImage: profileUrl != null && profileUrl!.isNotEmpty
           ? NetworkImage(profileUrl!)
-          : const AssetImage('assets/default_profile.png') as ImageProvider,
-      child: profileUrl == null || profileUrl!.isEmpty
-          ? const Icon(Icons.person, size: 50, color: Colors.grey)
-          : null,
+          : const AssetImage('assets/profile.png') as ImageProvider,
     );
   }
 

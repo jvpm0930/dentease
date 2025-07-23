@@ -1,4 +1,4 @@
-import 'package:dentease/patients/patient_feedbackPage.dart';
+import 'package:dentease/patients/patient_bookingSuccess.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -130,7 +130,7 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => PatientFeedbackpage(clinicId: widget.clinicId),
+          builder: (context) => PatientBookingSuccess(),
         ),
       );
     } catch (e) {

@@ -1,4 +1,5 @@
 import 'package:dentease/dentist/dentist_bookings_apprv.dart';
+import 'package:dentease/dentist/dentist_bookings_rej.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -33,7 +34,7 @@ class _DentistBookingPendPageState extends State<DentistBookingPendPage> {
         .from('bookings')
         .select(
             'booking_id, patient_id, service_id, clinic_id, date, status, patients(firstname), services(service_name)')
-        .or('status.eq.pending,status.eq.rejected')
+        .or('status.eq.pending')
         .eq('clinic_id', widget.clinicId); // Filters bookings by clinicId
 
     return response;
@@ -103,6 +104,26 @@ class _DentistBookingPendPageState extends State<DentistBookingPendPage> {
                       foregroundColor: Colors.white, // Disabled text color
                     ),
                     child: const Text("Pending"),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                     onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DentistBookingRejPage(
+                              clinicId: widget.clinicId,
+                              dentistId: widget.dentistId),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue, // Active color
+                      foregroundColor: Colors.white, // Active text color
+                    ),
+                    child: const Text("Rejected"),
                   ),
                 ),
               ],

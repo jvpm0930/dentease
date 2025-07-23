@@ -151,7 +151,7 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
                         backgroundImage:
                             profileUrl != null && profileUrl!.isNotEmpty
                                 ? NetworkImage(profileUrl!)
-                                : const AssetImage('assets/default_profile.png')
+                                : const AssetImage('assets/profile.png')
                                     as ImageProvider,
                         child: profileUrl == null || profileUrl!.isEmpty
                             ? const Icon(Icons.camera_alt,

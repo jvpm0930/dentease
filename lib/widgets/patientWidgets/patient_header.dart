@@ -113,10 +113,7 @@ class _PatientHeaderState extends State<PatientHeader> {
                         profileUrl != null && profileUrl!.isNotEmpty
                             ? NetworkImage(profileUrl!) // Load from Supabase
                             : const AssetImage('assets/profile.png')
-                                as ImageProvider, // Fallback image
-                    child: profileUrl == null || profileUrl!.isEmpty
-                        ? const Icon(Icons.person, size: 30, color: Colors.grey)
-                        : null,
+                                as ImageProvider,
                   ),
                   const SizedBox(height: 8),
                   // Display Email if Available
