@@ -181,7 +181,9 @@ class _DentistBookingPendPageState extends State<DentistBookingPendPage> {
                                       });
                                     }
                                   },
-                                  items: ["pending", "approved", "rejected"]
+                                  items: ["pending", "approved", "rejected",
+                                    "cancelled"
+                                  ]
                                       .map<DropdownMenuItem<String>>(
                                           (String status) {
                                     return DropdownMenuItem<String>(

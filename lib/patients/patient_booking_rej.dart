@@ -1,6 +1,6 @@
 import 'package:dentease/patients/patient_booking_apprv.dart';
-import 'package:dentease/patients/patient_booking_details.dart';
 import 'package:dentease/patients/patient_booking_pend.dart';
+import 'package:dentease/patients/patient_rej-can.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -33,8 +33,8 @@ class _PatientBookingRejState extends State<PatientBookingRej> {
     final response = await supabase
         .from('bookings')
         .select(
-            'booking_id, patient_id, service_id, clinic_id, date, status, clinics(clinic_name), services(service_name)')
-        .or('status.eq.rejected') // Alternative for filtering multiple statuses
+            'booking_id, patient_id, service_id, clinic_id, date, status, patients(firstname, lastname), clinics(clinic_name), services(service_name)')
+        .or('status.eq.rejected, status.eq.cancelled') // Alternative for filtering multiple statuses
         .eq('patient_id', widget.patientId);
     return response;
   }
@@ -46,7 +46,7 @@ class _PatientBookingRejState extends State<PatientBookingRej> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
-          "Rejected Booking Request",
+          "Rejected/Cancelled Booking",
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
@@ -124,7 +124,7 @@ class _PatientBookingRejState extends State<PatientBookingRej> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No pending bookings"));
+                  return const Center(child: Text("No rejected/cancelled bookings"));
                 }
 
                 final bookings = snapshot.data!;
@@ -164,8 +164,9 @@ class _PatientBookingRejState extends State<PatientBookingRej> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PatientBookingRej(  
-                                    patientId: widget.patientId,
+                                builder: (context) => PatientRejectedCancelledBookingsPage(  
+                                    booking: booking,
+                                    patientId: widget.patientId
                                 ),
                               ),
                             );
