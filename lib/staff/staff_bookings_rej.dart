@@ -1,6 +1,6 @@
-import 'package:dentease/dentist/dentist_bookings_apprv.dart';
-import 'package:dentease/dentist/dentist_bookings_pend.dart';
-import 'package:dentease/dentist/dentist_rej-can.dart';
+import 'package:dentease/staff/staff_bookings_apprv.dart';
+import 'package:dentease/staff/staff_bookings_pend.dart';
+import 'package:dentease/staff/staff_rej-can.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,17 +11,17 @@ String formatDateTime(String dateTime) {
   return DateFormat('MMM d, y • h:mma').format(parsedDate).toLowerCase();
 }
 
-class DentistBookingRejPage extends StatefulWidget {
-  final String dentistId;
+class StaffBookingRejPage extends StatefulWidget {
+  final String staffId;
   final String clinicId;
-  const DentistBookingRejPage(
-      {super.key, required this.dentistId, required this.clinicId});
+  const StaffBookingRejPage(
+      {super.key, required this.staffId, required this.clinicId});
 
   @override
-  _DentistBookingRejPageState createState() => _DentistBookingRejPageState();
+  _StaffBookingRejPageState createState() => _StaffBookingRejPageState();
 }
 
-class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
+class _StaffBookingRejPageState extends State<StaffBookingRejPage> {
   final supabase = Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> _bookingsFuture;
 
@@ -71,9 +71,9 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DentistBookingApprvPage(
+                          builder: (context) => StaffBookingApprvPage(
                               clinicId: widget.clinicId,
-                              dentistId: widget.dentistId),
+                              staffId: widget.staffId),
                         ),
                       );
                     },
@@ -87,13 +87,13 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                     onPressed: () {
+                    onPressed: () {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DentistBookingPendPage(
+                          builder: (context) => StaffBookingPendPage(
                               clinicId: widget.clinicId,
-                              dentistId: widget.dentistId),
+                              staffId: widget.staffId),
                         ),
                       );
                     },
@@ -107,8 +107,7 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed:
-                        null,
+                    onPressed: null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue, // Active color
                       foregroundColor: Colors.white, // Active text color
@@ -129,7 +128,8 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No rejected/cancelled bookings"));
+                  return const Center(
+                      child: Text("No rejected/cancelled bookings"));
                 }
 
                 final bookings = snapshot.data!;
@@ -139,37 +139,37 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                   itemBuilder: (context, index) {
                     final booking = bookings[index];
                     return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(10),
-                          title: Text(
-                            booking['services']['service_name'],
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(10),
+                        title: Text(
+                          booking['services']['service_name'],
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                "Patient: ${booking['patients']['firstname']}"),
+                            Text("Date: ${formatDateTime(booking['date'])}"),
+                            if (booking['clinics'] != null)
                               Text(
-                                  "Patient: ${booking['patients']['firstname']}"),
-                              Text("Date: ${formatDateTime(booking['date'])}"),
-                              if (booking['clinics'] != null)
-                                Text(
-                                    "Clinic: ${booking['clinics']['clinic_name']}"),
-                              Text("Status: ${booking['status']}",
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red)),
-                            ],
-                          ),
-                          trailing: GestureDetector(
+                                  "Clinic: ${booking['clinics']['clinic_name']}"),
+                            Text("Status: ${booking['status']}",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red)),
+                          ],
+                        ),
+                        trailing: GestureDetector(
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    DentistRejectedCancelledBookingsPage(
+                                    StaffRejectedCancelledBookingsPage(
                                         booking: booking),
                               ),
                             );
@@ -179,8 +179,8 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                             child: Icon(Icons.info, color: Colors.blue),
                           ),
                         ),
-                        ),
-                      );
+                      ),
+                    );
                   },
                 );
               },

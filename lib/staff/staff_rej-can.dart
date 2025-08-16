@@ -1,6 +1,6 @@
-import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dentease/widgets/background_cont.dart';
 import 'package:intl/intl.dart';
 
 String formatDateTime(String dateTime) {
@@ -8,21 +8,21 @@ String formatDateTime(String dateTime) {
   return DateFormat('MMM d, y • h:mma').format(parsedDate).toLowerCase();
 }
 
-class PatientRejectedCancelledBookingsPage extends StatefulWidget {
+class StaffRejectedCancelledBookingsPage extends StatefulWidget {
   final Map<String, dynamic> booking;
-  final String patientId;
 
-  const PatientRejectedCancelledBookingsPage(
-      {super.key, required this.booking, required this.patientId});
+  const StaffRejectedCancelledBookingsPage(
+      {super.key, required this.booking});
 
   @override
-  State<PatientRejectedCancelledBookingsPage> createState() =>
-      _PatientRejectedCancelledBookingsPageState();
+  State<StaffRejectedCancelledBookingsPage> createState() =>
+      _StaffRejectedCancelledBookingsPageState();
 }
 
-class _PatientRejectedCancelledBookingsPageState
-    extends State<PatientRejectedCancelledBookingsPage> {
+class _StaffRejectedCancelledBookingsPageState
+    extends State<StaffRejectedCancelledBookingsPage> {
   List<Map<String, dynamic>> bookings = [];
+  final TextEditingController _reasonController = TextEditingController();
   bool isLoading = true;
 
   @override
@@ -45,25 +45,35 @@ class _PatientRejectedCancelledBookingsPageState
     });
   }
 
+  Future<void> submitReason(String bookingId, String reason) async {
+    await Supabase.instance.client
+        .from('bookings')
+        .update({'reason': reason}).eq('booking_id', bookingId);
+
+    _reasonController.clear();
+    fetchBookings(); // refresh
+  }
+
   @override
   Widget build(BuildContext context) {
     return BackgroundCont(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text(
-              "Rejected & Cancelled Reason",
-              style: TextStyle(color: Colors.white),
-            ),
-            centerTitle: true,
-            backgroundColor: Colors.transparent, // Transparent AppBar
-            elevation: 0, // Remove shadow
-            iconTheme: const IconThemeData(color: Colors.white), // White icons
+        appBar: AppBar(
+          title: const Text(
+            "Rejected & Cancelled Reason",
+            style: TextStyle(color: Colors.white),
           ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent, // Transparent AppBar
+          elevation: 0, // Remove shadow
+          iconTheme: const IconThemeData(color: Colors.white), // White icons
+        ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : bookings.isEmpty
-                ? const Center(child: Text('No rejected or cancelled bookings.'))
+                ? const Center(
+                    child: Text('No rejected or cancelled bookings.'))
                 : ListView.builder(
                     itemCount: bookings.length,
                     itemBuilder: (context, index) {
@@ -77,11 +87,13 @@ class _PatientRejectedCancelledBookingsPageState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               ListTile(
-                                title: Text('Reason: ${booking['reason'] ?? 'None'}',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold // You can change this to any color you like
-                                  ),
+                                title: Text(
+                                  'Reason: ${booking['reason'] ?? 'None'}',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight
+                                          .bold // You can change this to any color you like
+                                      ),
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,8 +103,9 @@ class _PatientRejectedCancelledBookingsPageState
                                             'None'),
                                     Text(
                                         "Date booked: ${formatDateTime(booking['date'])}"),
-                                    Text('Status: ${booking['status']}',
-                                    style: TextStyle(
+                                    Text(
+                                      'Status: ${booking['status']}',
+                                      style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                         color: Colors
@@ -102,7 +115,28 @@ class _PatientRejectedCancelledBookingsPageState
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 8)
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _reasonController,
+                                decoration: InputDecoration(
+                                  labelText: 'Update reason',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (_reasonController.text.isNotEmpty) {
+                                    submitReason(
+                                      booking['booking_id'].toString(),
+                                      _reasonController.text,
+                                    );
+                                  }
+                                },
+                                child: const Text("Submit Reason"),
+                              ),
                             ],
                           ),
                         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dentease/widgets/background_cont.dart';
 import 'package:intl/intl.dart';
 
 String formatDateTime(String dateTime) {
@@ -55,77 +56,89 @@ class _DentistRejectedCancelledBookingsPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rejected & Cancelled Reason')),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : bookings.isEmpty
-              ? const Center(child: Text('No rejected or cancelled bookings.'))
-              : ListView.builder(
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ListTile(
-                              title: Text('Reason: ${booking['reason'] ?? 'None'}', 
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold // You can change this to any color you like
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Patient: ${booking['patients']['firstname']} ${booking['patients']['lastname']}' ??  'None'),
-                                  Text(
-                                      "Date booked: ${formatDateTime(booking['date'])}"),
-                                  Text(
-                                    'Status: ${booking['status']}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors
-                                          .redAccent, // You can change this to any color you like
-                                    ),
+    return BackgroundCont(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            "Rejected & Cancelled Reason",
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent, // Transparent AppBar
+          elevation: 0, // Remove shadow
+          iconTheme: const IconThemeData(color: Colors.white), // White icons
+        ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : bookings.isEmpty
+                ? const Center(child: Text('No rejected or cancelled bookings.'))
+                : ListView.builder(
+                    itemCount: bookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = bookings[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ListTile(
+                                title: Text('Reason: ${booking['reason'] ?? 'None'}', 
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold // You can change this to any color you like
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _reasonController,
-                              decoration: InputDecoration(
-                                labelText: 'Update reason',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Patient: ${booking['patients']['firstname']} ${booking['patients']['lastname']}' ??  'None'),
+                                    Text(
+                                        "Date booked: ${formatDateTime(booking['date'])}"),
+                                    Text(
+                                      'Status: ${booking['status']}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors
+                                            .redAccent, // You can change this to any color you like
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                if (_reasonController.text.isNotEmpty) {
-                                  submitReason(
-                                    booking['booking_id'].toString(),
-                                    _reasonController.text,
-                                  );
-                                }
-                              },
-                              child: const Text("Submit Reason"),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _reasonController,
+                                decoration: InputDecoration(
+                                  labelText: 'Update reason',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (_reasonController.text.isNotEmpty) {
+                                    submitReason(
+                                      booking['booking_id'].toString(),
+                                      _reasonController.text,
+                                    );
+                                  }
+                                },
+                                child: const Text("Submit Reason"),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

@@ -67,7 +67,7 @@ class _DentAddStaffState extends State<DentAddStaff> {
       }
 
       await supabase.from('staffs').insert({
-        'staff_id': user.id, 
+        'staff_id': user.id,
         'firstname': firstname,
         'lastname': lastname,
         'email': email,
@@ -104,8 +104,7 @@ class _DentAddStaffState extends State<DentAddStaff> {
               children: [
                 const SizedBox(height: 30),
                 Image.asset('assets/logo2.png', width: 500),
-                const Text('Add Staff',
-                    style: TextStyle(color: Colors.white)),
+                const Text('Add Staff', style: TextStyle(color: Colors.white)),
                 const SizedBox(height: 10),
                 _buildTextField(emailController, 'Email', Icons.mail),
                 const SizedBox(height: 10),

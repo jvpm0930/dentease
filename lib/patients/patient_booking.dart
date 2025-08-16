@@ -79,6 +79,13 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
     setState(() {
       availableHours = tempAvailableHours;
       bookedHours = tempBookedHours;
+
+      if (availableHours.isNotEmpty) {
+        // Auto-pick first available slot if nothing selected yet
+        selectedTime ??= TimeOfDay(hour: availableHours.first, minute: 0);
+      } else {
+        selectedTime = null; // No slots available
+      }
     });
   }
 
@@ -246,11 +253,13 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
                         fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: () => _selectTime(context),
+                  onPressed: availableHours.isEmpty
+                      ? null
+                      : () => _selectTime(context),
                   child: Text(
-                    selectedTime != null
-                        ? "Selected Time: ${selectedTime!.format(context)}"
-                        : "Choose Available Time",
+                    availableHours.isEmpty
+                        ? "No Slots Available"
+                        : "Selected Time: ${selectedTime!.format(context)}",
                   ),
                 ),
                 const SizedBox(height: 20),

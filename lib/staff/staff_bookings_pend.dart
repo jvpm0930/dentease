@@ -1,4 +1,5 @@
 import 'package:dentease/staff/staff_bookings_apprv.dart';
+import 'package:dentease/staff/staff_bookings_rej.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -79,8 +80,9 @@ class _StaffBookingPendPageState extends State<StaffBookingPendPage> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              StaffBookingApprvPage(clinicId: widget.clinicId, staffId: widget.staffId),
+                          builder: (context) => StaffBookingApprvPage(
+                              clinicId: widget.clinicId,
+                              staffId: widget.staffId),
                         ),
                       );
                     },
@@ -95,12 +97,32 @@ class _StaffBookingPendPageState extends State<StaffBookingPendPage> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed:
-                        null, // 🔹 Disable the "Approved" button in this page
+                        null, // 🔹 Disable the "Pending" button in this page
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey[300], // Disabled background
-                      foregroundColor: Colors.grey[600], // Disabled text color
+                      foregroundColor: Colors.white, // Disabled text color
                     ),
                     child: const Text("Pending"),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => StaffBookingRejPage(
+                              clinicId: widget.clinicId,
+                              staffId: widget.staffId),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue, // Active color
+                      foregroundColor: Colors.white, // Active text color
+                    ),
+                    child: const Text("Rejected"),
                   ),
                 ),
               ],
