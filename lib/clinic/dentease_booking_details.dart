@@ -24,8 +24,42 @@ class BookingDetailsPage extends StatefulWidget {
   State<BookingDetailsPage> createState() => _BookingDetailsPageState();
 }
 
+
 class _BookingDetailsPageState extends State<BookingDetailsPage> {
   final supabase = Supabase.instance.client;
+
+  Map<String, dynamic>? bill;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBill();
+  }
+
+  Future<void> _loadBill() async {
+    try {
+      final result = await supabase
+          .from('bills')
+          .select()
+          .eq('booking_id', widget.booking['booking_id'])
+          .maybeSingle();
+
+      if (mounted) {
+        setState(() {
+          bill = result;
+          loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        loading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading bill: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +156,35 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 20),
+                const Divider(thickness: 1.5, color: Colors.white),
+                const SizedBox(height: 20),
+                loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : bill != null
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Bill Details:",
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                  "Service Price: ${bill!['service_price']} php"),
+                              const SizedBox(height: 4),
+                              Text("Received: ${bill!['recieved_money']} php"),
+                              const SizedBox(height: 4),
+                              Text("Change: ${bill!['bill_change']} php"),
+                            ],
+                          )
+                        : const Text(
+                            "No bill found for this booking.",
+                            style: TextStyle(color: Colors.white),
+                          ),
                 const SizedBox(height: 20),
                 const Divider(thickness: 1.5, color: Colors.white),
                 const SizedBox(height: 20),

@@ -120,7 +120,7 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                               Text(
                                   "Service Price: ${bill!['service_price']} php"),
                               const SizedBox(height: 4),
-                              Text("Received: ${bill!['recieve_money']} php"),
+                              Text("Received: ${bill!['recieved_money']} php"),
                               const SizedBox(height: 4),
                               Text("Change: ${bill!['bill_change']} php"),
                             ],
