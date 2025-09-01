@@ -94,7 +94,7 @@ class AdmClinicDashboardPage extends StatelessWidget {
               },
             ),
             _buildCardButton(
-              title: 'Reviews',
+              title: 'Review',
               onTap: () {
                 Navigator.push(
                   context,
