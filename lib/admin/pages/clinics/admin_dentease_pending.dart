@@ -1,18 +1,18 @@
-import 'package:dentease/admin/pages/clinics/admin_dentease_pending.dart';
+import 'package:dentease/admin/pages/clinics/admin_dentease_first.dart';
 import 'package:dentease/admin/pages/clinics/admin_dentease_rejected.dart';
 import 'package:dentease/widgets/adminWidgets/admin_header.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_dentease_second.dart';
 
-class AdminPage extends StatefulWidget {
-  const AdminPage({super.key});
+class AdminPagev2 extends StatefulWidget {
+  const AdminPagev2({super.key});
 
   @override
-  State<AdminPage> createState() => _AdminPageState();
+  State<AdminPagev2> createState() => _AdminPagev2State();
 }
 
-class _AdminPageState extends State<AdminPage> {
+class _AdminPagev2State extends State<AdminPagev2> {
   final supabase = Supabase.instance.client;
   List<Map<String, dynamic>> clinics = [];
   bool isLoading = true;
@@ -28,7 +28,7 @@ class _AdminPageState extends State<AdminPage> {
       final response = await supabase
           .from('clinics')
           .select('clinic_id, clinic_name, status')
-          .eq('status', 'approved');
+          .or('status.eq.pending');
 
       setState(() {
         clinics = List<Map<String, dynamic>>.from(response);
@@ -62,7 +62,14 @@ class _AdminPageState extends State<AdminPage> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: null,
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminPage(),
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
@@ -73,14 +80,7 @@ class _AdminPageState extends State<AdminPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AdminPagev2(),
-                        ),
-                      );
-                    },
+                    onPressed: null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
@@ -148,7 +148,7 @@ class _AdminPageState extends State<AdminPage> {
                                 Text(
                                   clinic['status'],
                                   style: const TextStyle(
-                                      fontSize: 14, color: Colors.grey),
+                                      fontSize: 14, color: Colors.redAccent),
                                 ),
                               ],
                             ),

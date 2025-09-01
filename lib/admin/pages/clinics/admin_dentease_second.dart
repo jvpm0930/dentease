@@ -1,3 +1,4 @@
+import 'package:dentease/admin/pages/clinics/admin_clinic_reviews.dart';
 import 'package:flutter/material.dart';
 import '../dentists/admin_clinic_dentist.dart';
 import 'admin_clinic_details.dart';
@@ -88,6 +89,18 @@ class AdmClinicDashboardPage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => AdmClinicDetailsPage(clinicId: clinicId),
+                  ),
+                );
+              },
+            ),
+            _buildCardButton(
+              title: 'Reviews',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AdmClinicReviews(clinicId: clinicId),
                   ),
                 );
               },
