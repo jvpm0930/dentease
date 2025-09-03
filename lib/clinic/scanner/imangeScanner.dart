@@ -78,7 +78,26 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     setState(() {
       confidence = (recognitions[0]['confidence'] * 100);
       label = recognitions[0]['label'].toString();
-      fetchDiseaseDescription(label);
+
+      // Only accept if it's one of your 3 known diseases
+      const validDiseases = [
+        "tooth discoloration",
+        "gengivitis",
+        "calculus",
+      ];
+
+      // Confidence threshold (e.g., 80%)
+      const double confidenceThreshold = 50.0;
+
+      if (validDiseases.contains(label.toLowerCase()) &&
+          confidence >= confidenceThreshold) {
+        fetchDiseaseDescription(label);
+      } else {
+        label = "Not a tooth disease";
+        confidence = 0.0;
+        diseaseDescription =
+            "Try again with a clearer image.";
+      }
     });
   }
 
@@ -112,7 +131,26 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     setState(() {
       confidence = (recognitions[0]['confidence'] * 100);
       label = recognitions[0]['label'].toString();
-      fetchDiseaseDescription(label);
+
+      // Only accept if it's one of your 3 known diseases
+      const validDiseases = [
+        "tooth discoloration",
+        "gengivitis",
+        "calculus",
+      ];
+
+      // Confidence threshold (e.g., 80%)
+      const double confidenceThreshold = 80.0;
+
+      if (validDiseases.contains(label.toLowerCase()) &&
+          confidence >= confidenceThreshold) {
+        fetchDiseaseDescription(label);
+      } else {
+        label = "Not a tooth disease";
+        confidence = 0.0;
+        diseaseDescription =
+            "Try again with a clearer image.";
+      }
     });
   }
 

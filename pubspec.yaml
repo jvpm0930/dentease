@@ -57,4 +57,9 @@ flutter:
     - assets/upload.jpg
     - assets/model.tflite
     - assets/labels.txt
-    
+    - assets/apk-logo.png
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/apk-logo.png"
