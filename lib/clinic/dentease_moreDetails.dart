@@ -209,7 +209,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         const Text(
-                                          'License:',
+                                          'License Image:',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
@@ -235,6 +235,92 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                                 BorderRadius.circular(10),
                                             child: Image.network(
                                               clinicDetails!['license_url'],
+                                              height: 150,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                     const SizedBox(height: 8),
+
+                                  // Permit Image
+                                  if (clinicDetails?['permit_url'] != null)
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Permit Image:',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    FullScreenImage(
+                                                  imageUrl: clinicDetails![
+                                                      'permit_url'],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: Image.network(
+                                              clinicDetails!['permit_url'],
+                                              height: 150,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                     const SizedBox(height: 8),
+
+                                  // Office Image
+                                  if (clinicDetails?['office_url'] != null)
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Office Image:',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    FullScreenImage(
+                                                  imageUrl: clinicDetails![
+                                                      'office_url'],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: Image.network(
+                                              clinicDetails!['office_url'],
                                               height: 150,
                                               width: double.infinity,
                                               fit: BoxFit.cover,

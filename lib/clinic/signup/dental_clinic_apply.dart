@@ -25,21 +25,32 @@ import 'package:flutter/material.dart';
     double? latitude;
     double? longitude;
     File? licenseImage;
+    File? permitImage;
+    File? officeImage;
 
     final supabase = Supabase.instance.client;
 
-    Future<void> _pickImage() async {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        setState(() {
+    Future<void> _pickImage(String type) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        if (type == "license") {
           licenseImage = File(pickedFile.path);
-        });
-      }
+        } else if (type == "permit") {
+          permitImage = File(pickedFile.path);
+        } else if (type == "office") {
+          officeImage = File(pickedFile.path);
+        }
+      });
     }
+  }
 
     Future<void> _submitApplication() async {
       if (licenseImage == null ||
+      permitImage == null ||
+      officeImage == null ||
           selectedAddress == null ||
           latitude == null ||
           longitude == null) {
@@ -49,39 +60,76 @@ import 'package:flutter/material.dart';
       }
 
       try {
-        // Upload the license image to Supabase storage
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final filePath = 'licenses/$fileName';
-        await supabase.storage.from('licenses').upload(filePath, licenseImage!);
+      final supabase = Supabase.instance.client;
 
-        // Get the public URL for the uploaded license
-        final licenseUrl =
-            supabase.storage.from('licenses').getPublicUrl(filePath);
-
-        // Update the existing clinic record with the provided details
-        await supabase.from('clinics').update({
-          'address': selectedAddress,
-          'latitude': latitude,
-          'longitude': longitude,
-          'license_url': licenseUrl,
-        }).eq('clinic_id', widget.clinicId);
-
-        // Navigate to success page
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const DentalSuccess()),
-        );
-
-        // Clear the form fields
-        setState(() {
-          licenseImage = null;
-          selectedAddress = null;
-          latitude = null;
-          longitude = null;
-        });
-      } catch (e) {
-        _showSnackbar('Error submitting application: $e');
+      // --- License Upload ---
+      String? licenseUrl;
+      if (licenseImage != null) {
+        final licenseFileName =
+            '${DateTime.now().millisecondsSinceEpoch}_license.jpg';
+        final licenseFilePath = 'licenses/$licenseFileName';
+        await supabase.storage
+            .from('licenses')
+            .upload(licenseFilePath, licenseImage!);
+        licenseUrl =
+            supabase.storage.from('licenses').getPublicUrl(licenseFilePath);
       }
+
+      // --- Permit Upload ---
+      String? permitUrl;
+      if (permitImage != null) {
+        final permitFileName =
+            '${DateTime.now().millisecondsSinceEpoch}_permit.jpg';
+        final permitFilePath = 'permits/$permitFileName';
+        await supabase.storage
+            .from('permits')
+            .upload(permitFilePath, permitImage!);
+        permitUrl =
+            supabase.storage.from('permits').getPublicUrl(permitFilePath);
+      }
+
+      // --- Office Upload ---
+      String? officeUrl;
+      if (officeImage != null) {
+        final officeFileName =
+            '${DateTime.now().millisecondsSinceEpoch}_office.jpg';
+        final officeFilePath = 'offices/$officeFileName';
+        await supabase.storage
+            .from('offices')
+            .upload(officeFilePath, officeImage!);
+        officeUrl =
+            supabase.storage.from('offices').getPublicUrl(officeFilePath);
+      }
+
+      // --- Update clinic record ---
+      await supabase.from('clinics').update({
+        'address': selectedAddress,
+        'latitude': latitude,
+        'longitude': longitude,
+        'license_url': licenseUrl,
+        'permit_url': permitUrl,
+        'office_url': officeUrl,
+      }).eq('clinic_id', widget.clinicId);
+
+      // Navigate to success page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const DentalSuccess()),
+      );
+
+      // Clear the form fields
+      setState(() {
+        licenseImage = null;
+        permitImage = null;
+        officeImage = null;
+        selectedAddress = null;
+        latitude = null;
+        longitude = null;
+      });
+    } catch (e) {
+      _showSnackbar('Error submitting application: $e');
+    }
+
     }
 
     void _showSnackbar(String message) {
@@ -139,29 +187,77 @@ import 'package:flutter/material.dart';
                     ),
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text(
-                        'Upload License Image',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                 SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage("license"),
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text(
+                      'Upload License Image',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
                     ),
                   ),
-                  if (licenseImage != null) const SizedBox(height: 8),
-                  if (licenseImage != null)
-                    const Text(
-                      'License image selected.',
-                      style: TextStyle(color: Colors.black),
+                ),
+                if (licenseImage != null) const SizedBox(height: 8),
+                if (licenseImage != null)
+                  const Text(
+                    'License image selected.',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage("permit"),
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text(
+                      'Upload Permit Image',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                ),
+                if (permitImage != null) const SizedBox(height: 8),
+                if (permitImage != null)
+                  const Text(
+                    'Permit image selected.',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage("office"),
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text(
+                      'Upload Office Image',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                ),
+                if (officeImage != null) const SizedBox(height: 8),
+                if (officeImage != null)
+                  const Text(
+                    'Office image selected.',
+                    style: TextStyle(color: Colors.black),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,

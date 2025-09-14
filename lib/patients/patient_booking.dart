@@ -189,12 +189,11 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
       },
     );
 
-    if (pickedHour != null) {
-      setState(() {
-        selectedTime = TimeOfDay(hour: pickedHour, minute: 0);
-      });
+    setState(() {
+      selectedTime = TimeOfDay(hour: pickedHour ?? selectedTime!.hour, minute: 0);
+        });
+
     }
-  }
 
   @override
   Widget build(BuildContext context) {

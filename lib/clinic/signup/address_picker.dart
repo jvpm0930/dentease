@@ -16,8 +16,7 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
   LatLng? selectedPosition;
   GoogleMapController? mapController;
   String? actualAddress;
-  final String apiKey =
-      'AIzaSyBg-fAm25WSVmO768I42gecvL80vuJiuh4'; // Replace with your API key
+  final String apiKey ='AIzaSyBg-fAm25WSVmO768I42gecvL80vuJiuh4'; // Replace with your API key
 
   // Tagum City boundaries (approximate)
   final LatLng southwestBoundary = LatLng(7.382, 125.736); // Bottom-left corner

@@ -30,6 +30,10 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
   double? longitude;
   File? licenseImage; // Store picked image as File
   String? licenseUrl; // Store license URL from storage
+  File? permitImage;
+  String? permitUrl;
+  File? officeImage;
+  String? officeUrl;
 
   @override
   void initState() {
@@ -46,6 +50,8 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
     longitude = widget.clinicDetails['longitude'];
     licenseUrl =
         widget.clinicDetails['license_url']; // Load existing license URL
+    permitUrl = widget.clinicDetails['permit_url'];
+    officeUrl = widget.clinicDetails['office_url'];
   }
 
   /// Update clinic details in Supabase
@@ -60,8 +66,11 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
         'latitude': latitude,
         'longitude': longitude,
         if (licenseUrl != null)
-          'license_url': licenseUrl, // Update license URL if changed
+          'license_url': licenseUrl,
+        if (permitUrl != null) 'permit_url': permitUrl,
+        if (officeUrl != null) 'office_url': officeUrl,
       };
+
 
       //  Update clinic details in Supabase
       await supabase
@@ -102,54 +111,102 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
     }
   }
 
-  /// Pick an image from the gallery and upload it to Supabase storage
+  Future<String?> _uploadImage({
+    required File image,
+    required String folder,
+    required String fileName,
+    String? oldUrl,
+  }) async {
+    try {
+      final filePath = '$folder/$fileName';
+
+      // Delete old file if exists
+      if (oldUrl != null && oldUrl.isNotEmpty) {
+        final oldFilePath = oldUrl.split('/$folder/').last;
+        if (oldFilePath != fileName) {
+          await supabase.storage.from(folder).remove(['$folder/$oldFilePath']);
+        }
+      }
+
+      // Upload with upsert
+      await supabase.storage.from(folder).upload(filePath, image,
+          fileOptions: const FileOptions(upsert: true));
+
+      // Return public URL
+      return supabase.storage.from(folder).getPublicUrl(filePath);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading image: $e')),
+      );
+      return null;
+    }
+  }
+
   Future<void> _pickLicenseImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      setState(() {
-        licenseImage = File(image.path); // Save picked image
-      });
+      setState(() => licenseImage = File(image.path));
 
-      await _uploadLicenseImage(); // Upload image after picking
-    }
-  }
+      licenseUrl = await _uploadImage(
+        image: licenseImage!,
+        folder: 'licenses',
+        fileName: '${widget.clinicId}_license.jpg',
+        oldUrl: licenseUrl,
+      );
 
-  Future<void> _uploadLicenseImage() async {
-    try {
-      final fileName = '${widget.clinicId}_license.jpg';
-      final filePath = 'licenses/$fileName';
-
-      // Check if there is an existing license URL and delete old file if necessary
-      if (licenseUrl != null && licenseUrl!.isNotEmpty) {
-        final oldFilePath = licenseUrl!.split('/licenses/').last;
-
-        // Delete old file only if a different image is selected
-        if (oldFilePath != fileName) {
-          await supabase.storage
-              .from('licenses')
-              .remove(['licenses/$oldFilePath']);
-        }
+      if (licenseUrl != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('License image uploaded!')),
+        );
       }
-
-      // Upload the new license image with upsert true to overwrite if exists
-      await supabase.storage.from('licenses').upload(filePath, licenseImage!,
-          fileOptions: const FileOptions(upsert: true));
-
-      // Get the new public URL
-      licenseUrl = supabase.storage.from('licenses').getPublicUrl(filePath);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('License image selected!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error uploading license image: $e')),
-      );
     }
   }
 
+  Future<void> _pickPermitImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() => permitImage = File(image.path));
+
+      permitUrl = await _uploadImage(
+        image: permitImage!,
+        folder: 'permits',
+        fileName: '${widget.clinicId}_permit.jpg',
+        oldUrl: permitUrl,
+      );
+
+      if (permitUrl != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permit image uploaded!')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickOfficeImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() => officeImage = File(image.path));
+
+      officeUrl = await _uploadImage(
+        image: officeImage!,
+        folder: 'offices',
+        fileName: '${widget.clinicId}_office.jpg',
+        oldUrl: officeUrl,
+      );
+
+      if (officeUrl != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Office image uploaded!')),
+        );
+      }
+    }
+  }
 
 
 
@@ -200,6 +257,40 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
                   icon: const Icon(Icons.upload_file),
                   label: const Text(
                     'Pick License Image',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                ElevatedButton.icon(
+                  onPressed: _pickPermitImage,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text(
+                    'Pick Permit Image',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                ElevatedButton.icon(
+                  onPressed: _pickOfficeImage,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text(
+                    'Pick Office Image',
                     style: TextStyle(color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(

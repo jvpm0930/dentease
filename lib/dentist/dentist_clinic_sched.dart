@@ -127,14 +127,15 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
                 trailing: IconButton(
                   icon: const Icon(Icons.calendar_today, color: Colors.white),
                   onPressed: () async {
-                    DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 30)),
-                    );
-                    if (picked != null) setState(() => selectedDate = picked);
-                  },
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 30)),
+                      );
+
+                      setState(() => selectedDate = picked ?? selectedDate);
+                                        }
                 ),
               ),
               Row(

@@ -30,7 +30,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       final response = await supabase
           .from('clinics')
           .select(
-              'clinic_name, email, license_url, latitude, longitude, address, status, note')
+              'clinic_name, email, license_url, office_url, permit_url, latitude, longitude, address, status, note')
           .eq('clinic_id', widget.clinicId)
           .maybeSingle();
 
@@ -230,33 +230,43 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                             ),
                           ],
                         ),
-                      const SizedBox(height: 16),
-                      if (clinicDetails!['license_url'] != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'License:',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                clinicDetails!['license_url'],
-                                height: 200,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ],
-                        ),
+                         const SizedBox(height: 16),
+                          buildImageSection(
+                              "License Image:", clinicDetails!['license_url']),
+                          buildImageSection(
+                              "Permit Image:", clinicDetails!['permit_url']),
+                          buildImageSection(
+                              "Office Image:", clinicDetails!['office_url']),
                     ],
                   ),
                 ),
     );
   }
+  Widget buildImageSection(String title, String? url) {
+    if (url == null) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            url,
+            height: 200,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
 }

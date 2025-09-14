@@ -139,7 +139,7 @@ class _StaffClinicSchedPageState extends State<StaffClinicSchedPage> {
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 30)),
                   );
-                  if (picked != null) setState(() => selectedDate = picked);
+                  setState(() => selectedDate = picked ?? selectedDate);
                 },
               ),
             ),
