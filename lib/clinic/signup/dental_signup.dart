@@ -25,6 +25,7 @@ class _DentalSignupState extends State<DentalSignup> {
   late TextEditingController emailController;
   late TextEditingController clinicController;
   String selectedRole = 'dentist'; // Default role
+  bool _obscurePassword = true;
 
   final supabase = Supabase.instance.client;
 
@@ -36,7 +37,7 @@ class _DentalSignupState extends State<DentalSignup> {
     emailController = TextEditingController(text: widget.email);
   }
 
-  /// **🔹 Check if Email Already Exists**
+  /// * Check if Email Already Exists**
   Future<bool> _checkIfEmailExists(String email) async {
     final response = await supabase
         .from('dentists')
@@ -47,7 +48,7 @@ class _DentalSignupState extends State<DentalSignup> {
     return response != null; // If response is not null, email exists
   }
 
-  /// **🔹 Check if Firstname & Lastname Already Exist**
+  /// **Check if Firstname & Lastname Already Exist**
   Future<bool> _checkIfNameExists(String firstname, String lastname) async {
     final response = await supabase
         .from('dentists')
@@ -59,7 +60,7 @@ class _DentalSignupState extends State<DentalSignup> {
     return response != null; // If response is not null, name exists
   }
 
-  /// **🔹 Sign-Up Function with Duplicate Checks**
+  /// ** Sign-Up Function with Duplicate Checks**
   Future<void> signUp() async {
     try {
       final firstname = firstnameController.text.trim();
@@ -69,19 +70,19 @@ class _DentalSignupState extends State<DentalSignup> {
       final email = emailController.text.trim();
       final clinicId = clinicController.text.trim();
 
-      // 🔹 **Check for Empty Fields**
+      // **Check for Empty Fields**
       if (firstname.isEmpty || lastname.isEmpty || password.isEmpty) {
         _showSnackbar('Please fill in all fields.');
         return;
       }
 
-      // 🔹 **Check if First & Last Name Exists**
+      // **Check if First & Last Name Exists**
       if (await _checkIfNameExists(firstname, lastname)) {
         _showSnackbar('Name already taken. Please use a different name.');
         return;
       }
 
-      // 🔹 **Create User in Supabase Auth**
+      // **Create User in Supabase Auth**
       final authResponse = await supabase.auth.signUp(
         email: email,
         password: password,
@@ -102,7 +103,7 @@ class _DentalSignupState extends State<DentalSignup> {
         'role': selectedRole, // Store selected role
       });
 
-      // ✅ **Success Message & Navigate to Login Page**
+      // **Success Message & Navigate to Login Page**
       _showSnackbar('Signup successful! Next More Details');
       Navigator.pushReplacement(
         context,
@@ -118,7 +119,7 @@ class _DentalSignupState extends State<DentalSignup> {
     }
   }
 
-  /// **🔹 Snackbar Message Helper**
+  /// ** Snackbar Message Helper**
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -134,11 +135,12 @@ class _DentalSignupState extends State<DentalSignup> {
             padding: EdgeInsets.all(16),
             child: Column(
               children: [
-                SizedBox(height: 30),
-                Image.asset('assets/logo2.png', width: 500), // App Logo
+                SizedBox(height: 30), // App Logo
                 Text(
                   'Owner/Dentist Verification',
                   style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
@@ -183,7 +185,7 @@ class _DentalSignupState extends State<DentalSignup> {
   }) {
     return TextField(
       controller: controller,
-      obscureText: isPassword,
+      obscureText: isPassword ? _obscurePassword : false,
       keyboardType: keyboardType,
       readOnly: readOnly,
       decoration: InputDecoration(
@@ -192,6 +194,19 @@ class _DentalSignupState extends State<DentalSignup> {
           padding: EdgeInsets.symmetric(horizontal: 12),
           child: Icon(icon, color: Colors.indigo[900]),
         ),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.indigo[900],
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              )
+            : null,
       ),
     );
   }

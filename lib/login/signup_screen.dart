@@ -17,6 +17,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   String selectedRole = 'patient'; // Default role
+  bool _obscurePassword = true;
 
   final supabase = Supabase.instance.client;
 
@@ -72,7 +73,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'lastname': lastname,
         'phone': phone,
         'email': email,
-        'password':password,
+        'password': password,
         'role': selectedRole, // Store selected role
       });
 
@@ -101,13 +102,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    SizedBox(height: 30),
-                    Image.asset('assets/logo2.png', width: 500),// App Logo
+                    SizedBox(height: 30), // App Logo
                     Text(
                       'Patient Signup',
                       style: TextStyle(
-                        // Increase font size // Make it bold
-                        color: Colors.white, // Change color
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                     SizedBox(height: 10),
@@ -134,14 +135,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
             )));
   }
 
-  /// **🔹 Reusable TextField Widget**
+  /// ** Reusable TextField Widget**
   Widget _buildTextField(
-      TextEditingController controller, String hint, IconData icon,
-      {bool isPassword = false,
-      TextInputType keyboardType = TextInputType.text}) {
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
+    bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return TextField(
       controller: controller,
-      obscureText: isPassword,
+      obscureText: isPassword ? _obscurePassword : false,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
@@ -149,11 +153,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
           padding: EdgeInsets.symmetric(horizontal: 12),
           child: Icon(icon, color: Colors.indigo[900]),
         ),
+        // Only show eye toggle for password fields
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.indigo[900],
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              )
+            : null,
       ),
     );
   }
 
-  /// **🔹 Sign-Up Button Widget**
+  /// ** Sign-Up Button Widget**
   Widget _buildSignUpButton() {
     return ElevatedButton(
         onPressed: signUp,
@@ -176,17 +194,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ));
   }
 
-  /// **🔹 Login Redirect Button**
+  /// ** Login Redirect Button**
   Widget _buildLoginTextButton() {
     return TextButton(
       onPressed: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => LoginScreen()),
       ),
-      child: Text(
-        'Already have a Patient Account? Login',
-        style: TextStyle(
-          color: Colors.white,
+      child: const Text.rich(
+        TextSpan(
+          text: "Already have a Patient Account? ",
+          style: TextStyle(color: Colors.white),
+          children: [
+            TextSpan(
+              text: "Login",
+              style: TextStyle(
+                color: Colors.indigo,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );

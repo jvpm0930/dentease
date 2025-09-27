@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   final supabase = Supabase.instance.client;
   bool rememberMe = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -206,11 +207,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: passwordController,
+                  obscureText: _obscurePassword, // use the toggle
                   decoration: InputDecoration(
                     hintText: 'Password',
                     prefixIcon: Icon(Icons.lock, color: Colors.indigo[900]),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.indigo[900],
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                   ),
-                  obscureText: true,
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -252,8 +266,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => SignUpScreen()),
                   ),
-                  child: const Text('Don\'t have an Account? Sign up',
-                      style: TextStyle(color: Colors.white)),
+                  child: const Text.rich(
+                    TextSpan(
+                      text: "Don't have an Account? ",
+                      style: TextStyle(color: Colors.white),
+                      children: [
+                        TextSpan(
+                          text: "Sign up",
+                          style: TextStyle(
+                            color: Colors.indigo,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                  const SizedBox(height: 40),
                 ElevatedButton(

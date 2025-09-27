@@ -66,7 +66,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
 
       final clinicId = response['clinic_id']; // Retrieve clinic_id
 
-      // ✅ **Success Message & Navigate to Dental Signup page**
+      // **Success Message & Navigate to Dental Signup page**
       _showSnackbar('Success! Now Dentist Signup.');
       Navigator.pushReplacement(
         context,
@@ -98,12 +98,13 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const SizedBox(height: 30),
-                    Image.asset('assets/logo2.png', width: 500), // App Logo
+                    const SizedBox(height: 30), // App Logo
                     const Text(
                       'Clinic Details',
-                      style: TextStyle( 
-                        color: Colors.white, // Change color
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -180,12 +181,21 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
     return TextButton(
       onPressed: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => LoginScreen()),
       ),
-      child: const Text(
-        'Change your mind? Login',
-        style: TextStyle(
-          color: Colors.white,
+      child: const Text.rich(
+        TextSpan(
+          text: "Change your mind? ",
+          style: TextStyle(color: Colors.white),
+          children: [
+            TextSpan(
+              text: "Login",
+              style: TextStyle(
+                color: Colors.indigo, 
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );
