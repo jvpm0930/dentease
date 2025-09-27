@@ -33,25 +33,23 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         .eq('disease_name', label)
         .single();
 
-    if (diseaseResponse != null) {
-      final diseaseId = diseaseResponse['disease_id'];
+    final diseaseId = diseaseResponse['disease_id'];
 
-      // ✅ Fetch only active services
-      final serviceResponse = await Supabase.instance.client
-          .from('services')
-          .select('service_name, service_price, clinic_id, status')
-          .eq('disease_id', diseaseId)
-          .eq('status', 'active'); 
+    // ✅ Fetch only active services
+    final serviceResponse = await Supabase.instance.client
+        .from('services')
+        .select('service_name, service_price, clinic_id, status')
+        .eq('disease_id', diseaseId)
+        .eq('status', 'active'); 
 
-      if (mounted) {
-        setState(() {
-          diseaseDescription =
-              diseaseResponse['description'] ?? 'No description found.';
-          services = List<Map<String, dynamic>>.from(serviceResponse);
-        });
-      }
+    if (mounted) {
+      setState(() {
+        diseaseDescription =
+            diseaseResponse['description'] ?? 'No description found.';
+        services = List<Map<String, dynamic>>.from(serviceResponse);
+      });
     }
-  }
+    }
 
   
 
