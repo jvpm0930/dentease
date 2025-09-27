@@ -1,6 +1,8 @@
 import 'package:dentease/widgets/background_container.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/services.dart';
+
 
 class DentistAddService extends StatefulWidget {
   final String clinicId;
@@ -18,19 +20,43 @@ class _DentistAddServiceState extends State<DentistAddService> {
   final servPriceController = TextEditingController();
   late TextEditingController clinicController;
 
+  List<Map<String, dynamic>> diseases = []; // store disease_id + name
+  String? selectedDiseaseId; // store UUID
+
   @override
   void initState() {
     super.initState();
     clinicController = TextEditingController(text: widget.clinicId);
+    _fetchDiseases();
   }
 
+  /// 🔹 Fetch diseases (id + name)
+  Future<void> _fetchDiseases() async {
+    try {
+      final response =
+          await supabase.from('disease').select('disease_id, disease_name');
+
+      setState(() {
+        diseases = (response as List)
+            .map((d) => {
+                  'id': d['disease_id'] as String,
+                  'name': d['disease_name'] as String,
+                })
+            .toList();
+      });
+    } catch (e) {
+      _showSnackbar("Error fetching diseases: $e");
+    }
+  }
+
+  /// 🔹 Insert service
   Future<void> signUp() async {
     try {
       final servname = servNameController.text.trim();
       final servprice = servPriceController.text.trim();
       final clinicId = clinicController.text.trim();
 
-      if (servname.isEmpty || servprice.isEmpty) {
+      if (servname.isEmpty || servprice.isEmpty || selectedDiseaseId == null) {
         _showSnackbar('Please fill in all required fields.');
         return;
       }
@@ -39,6 +65,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
         'service_name': servname,
         'service_price': servprice,
         'clinic_id': clinicId,
+        'disease_id': selectedDiseaseId, // ✅ send disease_id (UUID)
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,9 +94,9 @@ class _DentistAddServiceState extends State<DentistAddService> {
             style: TextStyle(color: Colors.white),
           ),
           centerTitle: true,
-          backgroundColor: Colors.transparent, // Transparent AppBar
-          elevation: 0, // Remove shadow
-          iconTheme: const IconThemeData(color: Colors.white), // White icons
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: Center(
           child: SingleChildScrollView(
@@ -81,8 +108,36 @@ class _DentistAddServiceState extends State<DentistAddService> {
                     servNameController, 'Service Name', Icons.medical_services),
                 const SizedBox(height: 10),
                 _buildTextField(
-                    servPriceController, 'Service Price', Icons.price_change),
+                    servPriceController, 'Service Price', Icons.price_change,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly, // Allow digits only
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                /// 🔹 Dropdown showing disease_name but storing disease_id
+                DropdownButtonFormField<String>(
+                  value: selectedDiseaseId,
+                  items: diseases
+                      .map((disease) => DropdownMenuItem<String>(
+                            value: disease['id'] as String, // UUID
+                            child: Text(disease['name']), // Show name
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedDiseaseId = value;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    labelText: "Select Disease",
+                    prefixIcon:
+                        Icon(Icons.coronavirus, color: Colors.deepPurple),
+                  ),
+                ),
                 const SizedBox(height: 20),
+
                 _buildSignUpButton(),
               ],
             ),
@@ -99,11 +154,13 @@ class _DentistAddServiceState extends State<DentistAddService> {
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
     bool isPassword = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: isPassword,
+      inputFormatters: inputFormatters,
       readOnly: readOnly,
       decoration: InputDecoration(
         hintText: hint,
@@ -130,7 +187,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.indigo[900], // Fixed this line
+          color: Colors.indigo[900],
         ),
       ),
     );

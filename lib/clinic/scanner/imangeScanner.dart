@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dentease/patients/patient_clinicv2.dart';
 import 'package:dentease/patients/patient_pagev2.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
@@ -23,19 +24,37 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   double confidence = 0.0;
   String diseaseDescription = '';
 
+  List<Map<String, dynamic>> services = []; // store services for this disease
+
   Future<void> fetchDiseaseDescription(String label) async {
-    final response = await Supabase.instance.client
+    final diseaseResponse = await Supabase.instance.client
         .from('disease')
-        .select('description')
+        .select('disease_id, description')
         .eq('disease_name', label)
         .single();
 
-    if (mounted) {
-      setState(() {
-        diseaseDescription = response['description'] ?? 'No description found.';
-      });
+    if (diseaseResponse != null) {
+      final diseaseId = diseaseResponse['disease_id'];
+
+      // ✅ Fetch only active services
+      final serviceResponse = await Supabase.instance.client
+          .from('services')
+          .select('service_name, service_price, clinic_id, status')
+          .eq('disease_id', diseaseId)
+          .eq('status', 'active'); 
+
+      if (mounted) {
+        setState(() {
+          diseaseDescription =
+              diseaseResponse['description'] ?? 'No description found.';
+          services = List<Map<String, dynamic>>.from(serviceResponse);
+        });
+      }
     }
   }
+
+  
+
 
   Future<void> _tfLteInit() async {
     String? res = await Tflite.loadModel(
@@ -264,6 +283,51 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(height: 20),
+                                      if (services.isNotEmpty) ...[
+                                      const SizedBox(height: 20),
+                                      const Text(
+                                        "Available Services:",
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Column(
+                                        children: services.map((service) {
+                                          return Card(
+                                            elevation: 6,
+                                            margin: const EdgeInsets.symmetric(
+                                                vertical: 6, horizontal: 10),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: ListTile(
+                                              leading: const Icon(
+                                                  Icons.medical_services,
+                                                  color: Colors.blue),
+                                              title:
+                                                  Text(service['service_name']),
+                                              subtitle: Text(
+                                                  "Price: ₱${service['service_price']}"),
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        PatientClinicInfoPage(
+                                                            clinicId: service[
+                                                                'clinic_id']),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        }).toList(),
+                                      )
+
+                                    ]
                                   ],
                                 ),
                               ),
