@@ -1,3 +1,5 @@
+import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/widgets/background_container.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -140,41 +142,51 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Bill for ${patientName ?? 'Loading...'}"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            _buildTextField(
-                serviceNameController, 'Service Name', Icons.design_services),
-            const SizedBox(height: 12),
-            _buildTextField(
-                servicePriceController, 'Service Price', Icons.money,
-                number: true),
-            const SizedBox(height: 12),
-            _buildTextField(
-                receivedMoneyController, 'Received Money', Icons.attach_money,
-                number: true),
-            const SizedBox(height: 20),
-            if (change != null)
-              Text(
-                "Change: \$${change!.toStringAsFixed(2)}",
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green),
+    return BackgroundCont(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            "Bill for ${patientName ?? 'Loading...'}",
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              _buildTextField(
+                  serviceNameController, 'Service Name', Icons.design_services),
+              const SizedBox(height: 12),
+              _buildTextField(
+                  servicePriceController, 'Service Price', Icons.money,
+                  number: true),
+              const SizedBox(height: 12),
+              _buildTextField(
+                  receivedMoneyController, 'Received Money', Icons.money,
+                  number: true),
+              const SizedBox(height: 20),
+              if (change != null)
+                Text(
+                  "Change: \$${change!.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green),
+                ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: _submitBill,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
+                child: const Text("Submit Bill",
+                    style: TextStyle(color: Colors.white)),
               ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _submitBill,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
-              child: const Text("Submit Bill",
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

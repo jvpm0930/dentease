@@ -169,6 +169,10 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       clinicDetails?['phone'] ?? 'N/A'),
                                   _buildDetailRow('Email:',
                                       clinicDetails?['email'] ?? 'N/A'),
+                                  const SizedBox(height: 20),
+                                  const Divider(
+                                      thickness: 1.5, color: Colors.white),
+                                  const SizedBox(height: 20),
                                   _buildDetailRow('Address:',
                                       clinicDetails?['address'] ?? 'N/A'),
 
@@ -200,23 +204,28 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                         },
                                       ),
                                     ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 20),
+                                  const Divider(
+                                      thickness: 1.5, color: Colors.white),
+                                  const SizedBox(height: 20),
 
-                                  // License Image
-                                  if (clinicDetails?['license_url'] != null)
+                                  // license Image
+                                  const Text(
+                                    'License Image:',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (clinicDetails?['license_url'] != null &&
+                                      (clinicDetails!['license_url'] as String)
+                                          .isNotEmpty)
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          'License Image:',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
                                         GestureDetector(
                                           onTap: () {
                                             Navigator.push(
@@ -242,24 +251,39 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                           ),
                                         ),
                                       ],
+                                    )
+                                  else
+                                    const Text(
+                                      "No license image available.",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey,
+                                      ),
                                     ),
-                                     const SizedBox(height: 8),
+
+                                     const SizedBox(height: 20),
+                                  const Divider(
+                                      thickness: 1.5, color: Colors.white),
+                                  const SizedBox(height: 20),
 
                                   // Permit Image
-                                  if (clinicDetails?['permit_url'] != null)
+                                  const Text(
+                                    'Permit Image:',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (clinicDetails?['permit_url'] != null &&
+                                      (clinicDetails!['permit_url'] as String)
+                                          .isNotEmpty)
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          'Permit Image:',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
                                         GestureDetector(
                                           onTap: () {
                                             Navigator.push(
@@ -285,24 +309,39 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                           ),
                                         ),
                                       ],
+                                    )
+                                  else
+                                    const Text(
+                                      "No permit image available.",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey,
+                                      ),
                                     ),
-                                     const SizedBox(height: 8),
+
+                                 const SizedBox(height: 20),
+                                  const Divider(
+                                      thickness: 1.5, color: Colors.white),
+                                  const SizedBox(height: 20),
 
                                   // Office Image
-                                  if (clinicDetails?['office_url'] != null)
+                                  const Text(
+                                    'Office Image:',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (clinicDetails?['office_url'] != null &&
+                                      (clinicDetails!['office_url'] as String)
+                                          .isNotEmpty)
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          'Office Image:',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
                                         GestureDetector(
                                           onTap: () {
                                             Navigator.push(
@@ -328,22 +367,35 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                           ),
                                         ),
                                       ],
+                                    )
+                                  else
+                                    const Text(
+                                      "No office image available.",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey,
+                                      ),
                                     ),
+
+                                const SizedBox(height: 20),
+                                  const Divider(
+                                      thickness: 1.5, color: Colors.white),
                                   const SizedBox(height: 20),
 
                                   // Clinic Info
+                                  const Text(
+                                    'Clinic Info:',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                                   Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        'Clinic Info:',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
                                       Text(
                                         clinicDetails?['info'] ?? 'N/A',
                                         style: const TextStyle(
@@ -388,6 +440,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(height: 40),
                                 ],
                               ),
                             ),
