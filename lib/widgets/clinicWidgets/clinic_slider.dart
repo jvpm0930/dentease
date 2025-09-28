@@ -28,7 +28,7 @@ class _ClinicCarouselState extends State<ClinicCarousel> {
     try {
       final List<dynamic> response = await supabase
           .from('clinics')
-          .select('clinic_id, clinic_name, profile_url')
+          .select('clinic_id, clinic_name, office_url')
           .eq('status', 'approved'); // Only approved clinics
 
       setState(() {
@@ -99,7 +99,7 @@ class _ClinicCarouselState extends State<ClinicCarousel> {
                 itemBuilder: (context, index) {
                   final clinic = filteredClinics[index];
                   final clinicName = clinic['clinic_name'] ?? 'Unknown Clinic';
-                  final profileUrl = clinic['profile_url'] as String?;
+                  final profileUrl = clinic['office_url'] as String?;
 
                   return GestureDetector(
                     onTap: () {

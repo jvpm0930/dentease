@@ -20,6 +20,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
   String errorMessage = '';
   String serviceName = '';
   String servicePrice = '';
+  String serviceDetails = '';
   String serviceStatus = '';
 
   @override
@@ -32,7 +33,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
     try {
       final response = await supabase
           .from('services')
-          .select('service_name, service_price, status')
+          .select('service_name, service_price, status, service_detail')
           .eq('service_id', widget.serviceId)
           .maybeSingle();
 
@@ -40,6 +41,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
         setState(() {
           serviceName = response['service_name'] ?? '';
           servicePrice = response['service_price']?.toString() ?? '';
+          serviceDetails = response['service_detail'] ?? '';
           serviceStatus = response['status'] ?? '';
           isLoading = false;
         });
@@ -64,6 +66,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
       await supabase.from('services').update({
         'service_name': serviceName,
         'service_price': double.tryParse(servicePrice) ?? 0,
+        'service_detail' : serviceDetails,
         'status': serviceStatus
       }).eq('service_id', widget.serviceId);
 
@@ -123,7 +126,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
                           TextFormField(
                             initialValue: servicePrice,
                             decoration: const InputDecoration(
-                              labelText: "Price (PHP)",
+                              labelText: "Service Price (PHP)",
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: const TextInputType.numberWithOptions(
@@ -135,6 +138,29 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
                                 value!.isEmpty ? "Enter service price" : null,
                           ),
                           const SizedBox(height: 15),
+                          TextFormField(
+                            initialValue: serviceDetails,
+                            decoration: const InputDecoration(
+                              labelText: "Service Details",
+                              border: OutlineInputBorder(),
+                              alignLabelWithHint:
+                                  true, // keeps label aligned at the top when multiline
+                            ),
+                            onChanged: (value) => setState(() {
+                              serviceDetails = value;
+                            }),
+                            validator: (value) =>
+                                value!.isEmpty ? "Enter service details" : null,
+
+                            // Multiline settings
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.newline,
+                            minLines: null, // starting height
+                            maxLines:
+                                null, // expand up to this many lines (or use null for unlimited)
+                          ),
+                          const SizedBox(height: 15),
+                          
                           DropdownButtonFormField<String>(
                             value: serviceStatus,
                             decoration: const InputDecoration(

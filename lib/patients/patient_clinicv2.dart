@@ -34,14 +34,14 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
       // Fetch clinic details
       final clinicResponse = await supabase
           .from('clinics')
-          .select('clinic_name, info, address, profile_url')
+          .select('clinic_name, info, address, office_url')
           .eq('clinic_id', widget.clinicId)
           .maybeSingle();
 
       // Fetch only approved services for this clinic
       final servicesResponse = await supabase
           .from('services')
-          .select('service_id, service_name, service_price')
+          .select('service_id, service_name, service_price, service_detail')
           .eq('clinic_id', widget.clinicId)
           .eq('status', 'active'); 
       
@@ -95,12 +95,12 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                               SizedBox(
                                 width: double.infinity,
                                 height: 300,
-                                child: clinic!['profile_url'] != null &&
-                                        clinic!['profile_url']
+                                child: clinic!['office_url'] != null &&
+                                        clinic!['office_url']
                                             .toString()
                                             .isNotEmpty
                                     ? Image.network(
-                                        clinic!['profile_url'],
+                                        clinic!['office_url'],
                                         fit: BoxFit.cover,
                                         errorBuilder:
                                             (context, error, stackTrace) {
@@ -152,6 +152,35 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 10),
+                                    const Divider(
+                                        thickness: 1.5, color: Colors.grey),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.info,
+                                            color: Colors.indigo, size: 18),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            (clinic?['info'] != null &&
+                                                    clinic!['info']
+                                                        .toString()
+                                                        .isNotEmpty)
+                                                ? clinic!['info']
+                                                : 'No information available',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Divider(
+                                        thickness: 1.5, color: Colors.grey),
+                                    const SizedBox(height:10),
                                   ],
                                 ),
                               ),
@@ -232,6 +261,8 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                                                 'service_id'],
                                                             serviceName: service[
                                                                 'service_name'],
+                                                            servicePrice: service['service_price'],
+                                                            serviceDetail: service['service_detail'],
                                                             clinicId:
                                                                 widget.clinicId,
                                                           ),

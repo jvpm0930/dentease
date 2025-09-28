@@ -101,7 +101,7 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                 const SizedBox(height: 8),
                 Text("Service date booked: ${formatDateTime(booking['date'])}"),
                 const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.white),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
                 loading
                     ? const Center(child: CircularProgressIndicator())
@@ -130,7 +130,7 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                             style: TextStyle(color: Colors.white),
                           ),
                 const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.white),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
               ],
             ),

@@ -101,7 +101,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                 const SizedBox(height: 8),
                 Text("Service date booked: ${formatDateTime(booking['date'])}"),
                 const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.white),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -157,7 +157,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.white),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
                 loading
                     ? const Center(child: CircularProgressIndicator())
@@ -186,7 +186,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                             style: TextStyle(color: Colors.white),
                           ),
                 const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.white),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity, // Make the button full width

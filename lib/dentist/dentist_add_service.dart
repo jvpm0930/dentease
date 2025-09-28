@@ -18,6 +18,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
 
   final servNameController = TextEditingController();
   final servPriceController = TextEditingController();
+  final servDetController = TextEditingController();
   late TextEditingController clinicController;
 
   List<Map<String, dynamic>> diseases = []; // store disease_id + name
@@ -54,6 +55,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
     try {
       final servname = servNameController.text.trim();
       final servprice = servPriceController.text.trim();
+      final servdet = servDetController.text.trim();
       final clinicId = clinicController.text.trim();
 
       if (servname.isEmpty || servprice.isEmpty || selectedDiseaseId == null) {
@@ -64,8 +66,9 @@ class _DentistAddServiceState extends State<DentistAddService> {
       await supabase.from('services').insert({
         'service_name': servname,
         'service_price': servprice,
+        'service_detail': servdet,
         'clinic_id': clinicId,
-        'disease_id': selectedDiseaseId, // ✅ send disease_id (UUID)
+        'disease_id': selectedDiseaseId, //  send disease_id (UUID)
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,15 +108,22 @@ class _DentistAddServiceState extends State<DentistAddService> {
               children: [
                 const SizedBox(height: 10),
                 _buildTextField(
-                    servNameController, 'Service Name', Icons.medical_services),
+                  servNameController,
+                  'Service Name',
+                  Icons.medical_services,
+                  isMultiline: true,
+                ),
                 const SizedBox(height: 10),
                 _buildTextField(
-                    servPriceController, 'Service Price', Icons.price_change,
+                    servPriceController, 'Service Price', Icons.money,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly, // Allow digits only
                   ],
                 ),
+                const SizedBox(height: 10),
+                _buildTextField(
+                    servDetController, 'Service Details', Icons.info, isMultiline:true ),
                 const SizedBox(height: 10),
 
                 /// 🔹 Dropdown showing disease_name but storing disease_id
@@ -133,7 +143,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
                   decoration: const InputDecoration(
                     labelText: "Select Disease",
                     prefixIcon:
-                        Icon(Icons.coronavirus, color: Colors.deepPurple),
+                        Icon(Icons.coronavirus , color: Colors.indigo),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -147,30 +157,32 @@ class _DentistAddServiceState extends State<DentistAddService> {
     );
   }
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String hint,
-    IconData icon, {
-    TextInputType keyboardType = TextInputType.text,
-    bool readOnly = false,
-    bool isPassword = false,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: isPassword,
-      inputFormatters: inputFormatters,
-      readOnly: readOnly,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Icon(icon, color: Colors.indigo[900]),
+    Widget _buildTextField(
+      TextEditingController controller,
+      String hint,
+      IconData icon, {
+      TextInputType keyboardType = TextInputType.text,
+      bool readOnly = false,
+      bool isPassword = false,
+      bool isMultiline = false,
+      List<TextInputFormatter>? inputFormatters,
+    }) {
+      return TextField(
+        controller: controller,
+        obscureText: isPassword,
+        inputFormatters: inputFormatters,
+        readOnly: readOnly,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Icon(icon, color: Colors.indigo[900]),
+          ),
         ),
-      ),
-    );
-  }
+        keyboardType: isMultiline ? TextInputType.multiline : TextInputType.text,
+        maxLines: isMultiline ? null : 1, // null = grow dynamically
+      );
+    }
 
   Widget _buildSignUpButton() {
     return ElevatedButton(

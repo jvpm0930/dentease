@@ -171,7 +171,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       clinicDetails?['email'] ?? 'N/A'),
                                   const SizedBox(height: 20),
                                   const Divider(
-                                      thickness: 1.5, color: Colors.white),
+                                      thickness: 1.5, color: Colors.blueGrey),
                                   const SizedBox(height: 20),
                                   _buildDetailRow('Address:',
                                       clinicDetails?['address'] ?? 'N/A'),
@@ -206,7 +206,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                     ),
                                   const SizedBox(height: 20),
                                   const Divider(
-                                      thickness: 1.5, color: Colors.white),
+                                      thickness: 1.5, color: Colors.blueGrey),
                                   const SizedBox(height: 20),
 
                                   // license Image
@@ -264,7 +264,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                      const SizedBox(height: 20),
                                   const Divider(
-                                      thickness: 1.5, color: Colors.white),
+                                      thickness: 1.5, color: Colors.blueGrey),
                                   const SizedBox(height: 20),
 
                                   // Permit Image
@@ -322,7 +322,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                  const SizedBox(height: 20),
                                   const Divider(
-                                      thickness: 1.5, color: Colors.white),
+                                      thickness: 1.5, color: Colors.blueGrey),
                                   const SizedBox(height: 20),
 
                                   // Office Image
@@ -380,7 +380,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                 const SizedBox(height: 20),
                                   const Divider(
-                                      thickness: 1.5, color: Colors.white),
+                                      thickness: 1.5, color: Colors.blueGrey),
                                   const SizedBox(height: 20),
 
                                   // Clinic Info
@@ -405,6 +405,9 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 20),
+                                  const Divider(
+                                      thickness: 1.5, color: Colors.blueGrey),
                                   const SizedBox(height: 20),
 
                                   // Edit Button to navigate to EditClinicDetails

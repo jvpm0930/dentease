@@ -7,12 +7,16 @@ import 'package:table_calendar/table_calendar.dart';
 class PatientBookingPage extends StatefulWidget {
   final String serviceId;
   final String serviceName;
+  final String servicePrice;
+  final String serviceDetail;
   final String clinicId;
 
   const PatientBookingPage({
     super.key,
     required this.serviceId,
     required this.serviceName,
+    required this.servicePrice,
+    required this.serviceDetail,
     required this.clinicId,
   });
 
@@ -151,8 +155,6 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
     }
   }
 
-
-
   /// Show available time slots dialog
   Future<void> _selectTime(BuildContext context) async {
     int? pickedHour = await showDialog<int>(
@@ -190,10 +192,10 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
     );
 
     setState(() {
-      selectedTime = TimeOfDay(hour: pickedHour ?? selectedTime!.hour, minute: 0);
-        });
-
-    }
+      selectedTime =
+          TimeOfDay(hour: pickedHour ?? selectedTime!.hour, minute: 0);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +218,51 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
                 Text("Service: ${widget.serviceName}",
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: "Price: ",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      TextSpan(
+                        text: widget.servicePrice.isNotEmpty
+                            ? widget.servicePrice
+                            : 'No price available',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Details:",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5), // spacing
+                    Text(
+                      widget.serviceDetail.isNotEmpty
+                          ? widget.serviceDetail
+                          : 'No details available',
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
                 Text("Select a Date:",
                     style: const TextStyle(
@@ -272,6 +319,8 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
                         onPressed: _bookService,
                         child: const Text("Confirm Booking"),
                       ),
+                
+                SizedBox(height: 30),
               ],
             ),
           ),
