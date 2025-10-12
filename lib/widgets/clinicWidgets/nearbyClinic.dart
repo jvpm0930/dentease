@@ -43,7 +43,7 @@ class _ClinicMapPageState extends State<ClinicMapPage> {
   }
 
   Future<void> _drawRoute(LatLng destination) async {
-    const apiKey = 'AIzaSyBg-fAm25WSVmO768I42gecvL80vuJiuh4'; // Replace with your API key
+    const apiKey = 'AIzaSyB_wMaSJqbHeIY2ruwHRLhOerBXzbefnRg'; // Replace with your API key
     final origin =
         '${_currentPosition!.latitude},${_currentPosition!.longitude}';
     final dest = '${destination.latitude},${destination.longitude}';

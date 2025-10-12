@@ -308,19 +308,33 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
                         : "Selected Time: ${selectedTime!.format(context)}",
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 5),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
+                const SizedBox(height: 5),
                 if (errorMessage != null)
                   Text(errorMessage!,
                       style: const TextStyle(color: Colors.red, fontSize: 14)),
-                const SizedBox(height: 20),
-                isBooking
-                    ? const Center(child: CircularProgressIndicator())
-                    : ElevatedButton(
-                        onPressed: _bookService,
-                        child: const Text("Confirm Booking"),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _bookService,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.indigo[900],
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      elevation: 5,
+                    ),
+                    child: const Text(
+                      "Confirm Booking",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                
-                SizedBox(height: 30),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 50),
               ],
             ),
           ),

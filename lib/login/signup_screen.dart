@@ -82,7 +82,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (_) => LoginScreen()));
     } catch (e) {
-      _showSnackbar('Error: $e');
+      _showSnackbar('Try Again');
     }
   }
 

@@ -3,7 +3,11 @@ import 'package:dentease/clinic/dentease_edit_bills.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
+import 'dart:async';
 
 String formatDateTime(String dateTime) {
   DateTime parsedDate = DateTime.parse(dateTime);
@@ -30,6 +34,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
 
   Map<String, dynamic>? bill;
   bool loading = true;
+  bool uploading = false;
+
 
   @override
   void initState() {
@@ -60,6 +66,103 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       );
     }
   }
+
+  Future<void> _beforeImageandUpload() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image == null) return; // user cancelled
+
+    setState(() => uploading = true);
+
+    try {
+      final fileExt = path.extension(image.path);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}$fileExt';
+      final bookingId = widget.booking['booking_id'];
+      final filePath = 'before/$bookingId/$fileName';
+
+      // Upload to Supabase Storage (bucket name must exist)
+      await supabase.storage.from('before').upload(filePath, File(image.path));
+
+      // Get public URL
+      final publicUrl = supabase.storage.from('before').getPublicUrl(filePath);
+
+      // Update the bookings table with URL
+      await supabase.from('bookings').update({
+        'before_url': publicUrl,
+      }).eq('booking_id', bookingId);
+
+      // Refresh booking data
+      final updatedBooking = await supabase
+          .from('bookings')
+          .select('before_url')
+          .eq('booking_id', bookingId)
+          .single();
+
+      setState(() {
+        widget.booking['before_url'] = updatedBooking['before_url'];
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Photo uploaded successfully!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error uploading photo: $e")),
+      );
+    } finally {
+      setState(() => uploading = false);
+    }
+  }
+
+  Future<void> _afterImageandUpload() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image == null) return; // user cancelled
+
+    setState(() => uploading = true);
+
+    try {
+      final fileExt = path.extension(image.path);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}$fileExt';
+      final bookingId = widget.booking['booking_id'];
+      final filePath = 'after/$bookingId/$fileName';
+
+      // Upload to Supabase Storage (bucket name must exist)
+      await supabase.storage.from('after').upload(filePath, File(image.path));
+
+      // Get public URL
+      final publicUrl = supabase.storage.from('after').getPublicUrl(filePath);
+
+      // Update the bookings table with URL
+      await supabase.from('bookings').update({
+        'after_url': publicUrl,
+      }).eq('booking_id', bookingId);
+
+      // Refresh booking data
+      final updatedBooking = await supabase
+          .from('bookings')
+          .select('after_url')
+          .eq('booking_id', bookingId)
+          .single();
+
+      setState(() {
+        widget.booking['after_url'] = updatedBooking['after_url'];
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Photo uploaded successfully!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error uploading photo: $e")),
+      );
+    } finally {
+      setState(() => uploading = false);
+    }
+  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +212,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                       child: ElevatedButton(
                         onPressed: () {
                           final patientId = booking['patient_id'];
+                          final serviceId = booking['service_id'];
                           final bookingId = booking['booking_id'];
 
                           Navigator.pushReplacement(
@@ -117,6 +221,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                               builder: (context) => BillCalculatorPage(
                                 clinicId: widget.clinicId,
                                 patientId: patientId,
+                                serviceId: serviceId,
                                 bookingId: bookingId,
                               ),
                             ),
@@ -176,6 +281,12 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                               Text(
                                   "Service Price: ${bill!['service_price']} php"),
                               const SizedBox(height: 4),
+                              Text(
+                                  "Doctor's fee: ${bill!['doctor_fee']} php"),
+                              const SizedBox(height: 4),
+                              Text(
+                                  "Medicine fee: ${bill!['medicine_fee']} php"),
+                              const SizedBox(height: 4),
                               Text("Received: ${bill!['recieved_money']} php"),
                               const SizedBox(height: 4),
                               Text("Change: ${bill!['bill_change']} php"),
@@ -188,32 +299,130 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                 const SizedBox(height: 20),
                 const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity, // Make the button full width
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final patientId = booking['patient_id'];
-                      final bookingId = booking['booking_id'];
-                      /*
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BillCalculatorPage(
-                            clinicId: widget.clinicId,
-                            patientId: patientId,
-                            bookingId: bookingId,
-                          ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _beforeImageandUpload,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
                         ),
-                      );
-                      */
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
+                        child: Text("Before Service Photo"),
+                      ),
                     ),
-                    child: const Text("Receipt"),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed:  _afterImageandUpload,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text("After Service Photo"),
+                      ),
+                    ),
+                  ],
+                ),                
+                const SizedBox(height: 20),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
+                const SizedBox(height: 20),
+                const Text(
+                  'Before Service Image:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                 ),
+                const SizedBox(height: 8),
+                if (booking?['before_url'] != null &&
+                    (booking!['before_url'] as String).isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FullScreenImage(
+                                imageUrl: booking!['before_url'],
+                              ),
+                            ),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            booking!['before_url'],
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const Text(
+                    "No before services image is available.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey,
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
+                const SizedBox(height: 20),
+                const Text(
+                  'After Service Image:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (booking?['after_url'] != null &&
+                    (booking!['after_url'] as String).isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FullScreenImage(
+                                imageUrl: booking!['after_url'],
+                              ),
+                            ),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            booking!['after_url'],
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const Text(
+                    "No after services image is available.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey,
+                    ),
+                  ),
+                const SizedBox(height: 50),
               ],
             ),
           ),
@@ -222,3 +431,24 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     );
   }
 }
+class FullScreenImage extends StatelessWidget {
+  final String imageUrl;
+  const FullScreenImage({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(imageUrl, fit: BoxFit.contain),
+        ),
+      ),
+    );
+  }
+}
+

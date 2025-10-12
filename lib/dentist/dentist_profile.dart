@@ -138,9 +138,6 @@ class _DentistProfileState extends State<DentistProfile> {
                         backgroundColor: Colors.blue, // Button color
                         padding: const EdgeInsets.symmetric(
                             horizontal: 30, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                       ),
                       child: const Text(
                         'Edit Details',

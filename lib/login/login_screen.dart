@@ -177,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
       throw 'User role not found in any table';
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Try Again')),
       );
     }
   }
