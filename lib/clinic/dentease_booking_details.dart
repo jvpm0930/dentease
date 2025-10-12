@@ -336,8 +336,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (booking?['before_url'] != null &&
-                    (booking!['before_url'] as String).isNotEmpty)
+                if (booking['before_url'] != null &&
+                    (booking['before_url'] as String).isNotEmpty)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -347,7 +347,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => FullScreenImage(
-                                imageUrl: booking!['before_url'],
+                                imageUrl: booking['before_url'],
                               ),
                             ),
                           );
@@ -355,7 +355,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: Image.network(
-                            booking!['before_url'],
+                            booking['before_url'],
                             height: 150,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -385,8 +385,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (booking?['after_url'] != null &&
-                    (booking!['after_url'] as String).isNotEmpty)
+                if (booking['after_url'] != null &&
+                    (booking['after_url'] as String).isNotEmpty)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -396,7 +396,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => FullScreenImage(
-                                imageUrl: booking!['after_url'],
+                                imageUrl: booking['after_url'],
                               ),
                             ),
                           );
@@ -404,7 +404,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: Image.network(
-                            booking!['after_url'],
+                            booking['after_url'],
                             height: 150,
                             width: double.infinity,
                             fit: BoxFit.cover,

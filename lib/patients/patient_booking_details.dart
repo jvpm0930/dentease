@@ -135,9 +135,125 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                 const SizedBox(height: 20),
                 const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
+                const Text(
+                  'Before Service Image:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (booking['before_url'] != null &&
+                    (booking['before_url'] as String).isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FullScreenImage(
+                                imageUrl: booking['before_url'],
+                              ),
+                            ),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            booking['before_url'],
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const Text(
+                    "No before services image is available.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey,
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                const Divider(thickness: 1.5, color: Colors.blueGrey),
+                const SizedBox(height: 20),
+                const Text(
+                  'After Service Image:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (booking['after_url'] != null &&
+                    (booking['after_url'] as String).isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FullScreenImage(
+                                imageUrl: booking['after_url'],
+                              ),
+                            ),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            booking['after_url'],
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const Text(
+                    "No after services image is available.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey,
+                    ),
+                  ),
+                const SizedBox(height: 50),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+class FullScreenImage extends StatelessWidget {
+  final String imageUrl;
+  const FullScreenImage({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(imageUrl, fit: BoxFit.contain),
         ),
       ),
     );

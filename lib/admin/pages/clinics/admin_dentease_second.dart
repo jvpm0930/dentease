@@ -1,4 +1,5 @@
 import 'package:dentease/admin/pages/clinics/admin_clinic_reviews.dart';
+import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import '../dentists/admin_clinic_dentist.dart';
 import 'admin_clinic_details.dart';
@@ -39,73 +40,77 @@ class AdmClinicDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(clinicName),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildCardButton(
-              title: 'Dentists',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        AdmClinicDentistsPage(clinicId: clinicId),
-                  ),
-                );
-              },
-            ),
-            _buildCardButton(
-              title: 'Staff',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AdmClinicStaffsPage(clinicId: clinicId),
-                  ),
-                );
-              },
-            ),
-            _buildCardButton(
-              title: 'Patients',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        AdmClinicPatientsPage(clinicId: clinicId),
-                  ),
-                );
-              },
-            ),
-            _buildCardButton(
-              title: 'Details',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AdmClinicDetailsPage(clinicId: clinicId),
-                  ),
-                );
-              },
-            ),
-            _buildCardButton(
-              title: 'Reviews',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        AdmClinicReviews(clinicId: clinicId),
-                  ),
-                );
-              },
-            ),
-          ],
+    return BackgroundCont(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: Text(clinicName),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              _buildCardButton(
+                title: 'Dentists',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AdmClinicDentistsPage(clinicId: clinicId),
+                    ),
+                  );
+                },
+              ),
+              _buildCardButton(
+                title: 'Staff',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdmClinicStaffsPage(clinicId: clinicId),
+                    ),
+                  );
+                },
+              ),
+              _buildCardButton(
+                title: 'Patients',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AdmClinicPatientsPage(clinicId: clinicId),
+                    ),
+                  );
+                },
+              ),
+              _buildCardButton(
+                title: 'Details',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdmClinicDetailsPage(clinicId: clinicId),
+                    ),
+                  );
+                },
+              ),
+              _buildCardButton(
+                title: 'Reviews',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AdmClinicReviews(clinicId: clinicId),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

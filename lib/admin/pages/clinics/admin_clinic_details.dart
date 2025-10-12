@@ -1,3 +1,4 @@
+import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -30,7 +31,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       final response = await supabase
           .from('clinics')
           .select(
-              'clinic_name, email, license_url, office_url, permit_url, latitude, longitude, address, status, note')
+              'clinic_name, email, info, license_url, office_url, permit_url, latitude, longitude, address, status, note')
           .eq('clinic_id', widget.clinicId)
           .maybeSingle();
 
@@ -96,177 +97,332 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Clinic Details'),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : clinicDetails == null
-              ? const Center(child: Text('No details found'))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        clinicDetails!['clinic_name'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+    return BackgroundCont(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('Clinic Details'),
+        ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : clinicDetails == null
+                ? const Center(child: Text('No details found'))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          clinicDetails!['clinic_name'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          const Icon(Icons.approval, color: Colors.indigo),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: DropdownButton<String>(
-                              value: selectedStatus,
-                              onChanged: (newValue) {
-                                setState(() {
-                                  selectedStatus = newValue!;
-                                });
-                              },
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'pending',
-                                  child: Text('Pending'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'rejected',
-                                  child: Text('Rejected'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'approved',
-                                  child: Text('Approved'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: _updateStatus,
-                            child: const Text('Update Status'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.note_alt, color: Colors.indigo),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _noteController,
-                              maxLines: null,
-                              decoration: const InputDecoration(
-                                hintText: 'Enter note...',
-                                border: OutlineInputBorder(),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            const Icon(Icons.approval, color: Colors.indigo),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButton<String>(
+                                value: selectedStatus,
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    selectedStatus = newValue!;
+                                  });
+                                },
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'pending',
+                                    child: Text('Pending'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'rejected',
+                                    child: Text('Rejected'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'approved',
+                                    child: Text('Approved'),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _updateNote,
-                            child: const Text('Send Note'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          const Icon(Icons.email, color: Colors.indigo),
-                          const SizedBox(width: 8),
-                          Text(
-                            clinicDetails!['email'] ?? 'No email provided',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.location_on, color: Colors.indigo),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              clinicDetails!['address'] ??
-                                  'No address provided',
-                              style: const TextStyle(fontSize: 16),
+                            ElevatedButton(
+                              onPressed: _updateStatus,
+                              child: const Text('Update Status'),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (clinicDetails!['latitude'] != null &&
-                          clinicDetails!['longitude'] != null)
-                        Column(
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(thickness: 1.5, color: Colors.blueGrey),
+                        const SizedBox(height: 20),
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 200,
-                              child: GoogleMap(
-                                initialCameraPosition: CameraPosition(
-                                  target: LatLng(
-                                    clinicDetails!['latitude'],
-                                    clinicDetails!['longitude'],
-                                  ),
-                                  zoom: 15,
+                            const Icon(Icons.note_alt, color: Colors.indigo),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _noteController,
+                                maxLines: null,
+                                decoration: const InputDecoration(
+                                  hintText: 'Enter note...',
+                                  border: OutlineInputBorder(),
                                 ),
-                                markers: {
-                                  Marker(
-                                    markerId: const MarkerId('clinicLocation'),
-                                    position: LatLng(
-                                      clinicDetails!['latitude'],
-                                      clinicDetails!['longitude'],
-                                    ),
-                                  ),
-                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _updateNote,
+                              child: const Text('Send Note'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(thickness: 1.5, color: Colors.blueGrey),
+                        const SizedBox(height: 20),
+                        Row(  
+                          children: [
+                            const Icon(Icons.email, color: Colors.indigo),
+                            const SizedBox(width: 8),
+                            Text(
+                              clinicDetails!['email'] ?? 'No email provided',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            const Icon(Icons.info, color: Colors.indigo),
+                            const SizedBox(width: 8),
+                            Text(
+                              clinicDetails!['info'] ?? 'No info provided',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(thickness: 1.5, color: Colors.blueGrey),
+                        const SizedBox(height: 20),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on, color: Colors.indigo),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                clinicDetails!['address'] ??
+                                    'No address provided',
+                                style: const TextStyle(fontSize: 16),
                               ),
                             ),
                           ],
                         ),
-                         const SizedBox(height: 16),
-                          buildImageSection(
-                              "License Image:", clinicDetails!['license_url']),
-                          buildImageSection(
-                              "Permit Image:", clinicDetails!['permit_url']),
-                          buildImageSection(
-                              "Office Image:", clinicDetails!['office_url']),
-                    ],
+                        const SizedBox(height: 16),
+                        if (clinicDetails!['latitude'] != null &&
+                            clinicDetails!['longitude'] != null)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 200,
+                                child: GoogleMap(
+                                  initialCameraPosition: CameraPosition(
+                                    target: LatLng(
+                                      clinicDetails!['latitude'],
+                                      clinicDetails!['longitude'],
+                                    ),
+                                    zoom: 15,
+                                  ),
+                                  markers: {
+                                    Marker(
+                                      markerId: const MarkerId('clinicLocation'),
+                                      position: LatLng(
+                                        clinicDetails!['latitude'],
+                                        clinicDetails!['longitude'],
+                                      ),
+                                    ),
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 20),
+                        const Divider(thickness: 1.5, color: Colors.blueGrey),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'License Image:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (clinicDetails!['license_url'] != null &&
+                            (clinicDetails!['license_url'] as String)
+                                .isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FullScreenImage(
+                                        imageUrl: clinicDetails!['license_url'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    clinicDetails!['license_url'],
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          const Text(
+                            "No license image is available.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Permit Image:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (clinicDetails!['permit_url'] != null &&
+                            (clinicDetails!['permit_url'] as String)
+                                .isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FullScreenImage(
+                                        imageUrl: clinicDetails!['permit_url'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    clinicDetails!['permit_url'],
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          const Text(
+                            "No permit image is available.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Office Image:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (clinicDetails!['office_url'] != null &&
+                            (clinicDetails!['office_url'] as String).isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FullScreenImage(
+                                        imageUrl: clinicDetails!['office_url'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    clinicDetails!['office_url'],
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          const Text(
+                            "No permit image is available.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        const Divider(thickness: 1.5, color: Colors.blueGrey),
+                        const SizedBox(height: 50),
+                      ],
+                    ),
                   ),
-                ),
+      ),
     );
   }
-  Widget buildImageSection(String title, String? url) {
-    if (url == null) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            url,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
+}
+class FullScreenImage extends StatelessWidget {
+  final String imageUrl;
+  const FullScreenImage({super.key, required this.imageUrl});
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(imageUrl, fit: BoxFit.contain),
+        ),
+      ),
+    );
+  }
 }

@@ -33,7 +33,7 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
     setState(() {
       _bookingsFuture = supabase
           .from('bookings')
-          .select('booking_id, patient_id, service_id, clinic_id, date, status, services(service_name, service_price), clinics(clinic_name), patients(firstname, lastname, email, phone)')
+          .select('booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, services(service_name, service_price), clinics(clinic_name), patients(firstname, lastname, email, phone)')
           .eq('status', 'approved')
           .eq('patient_id', widget.patientId);
     });
