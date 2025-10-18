@@ -187,22 +187,20 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Service name: ${booking['services']['service_name']}",
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                _buildDetailRow(
+                  "Service name:",
+                  booking['services']['service_name'],
+                  labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
-                Text("Service price: ${booking['services']['service_price']} php"),
-                const SizedBox(height: 8),
-                Text(
-                    "Patient name: ${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
-                const SizedBox(height: 8),
-                Text("Patient email: ${booking['patients']['email']}"),
-                const SizedBox(height: 8),
-                Text("Patient phone #: ${booking['patients']['phone']}"),
-                const SizedBox(height: 8),
-                Text("Service date booked: ${formatDateTime(booking['date'])}"),
+                _buildDetailRow("Service price:",
+                    "${booking['services']['service_price']} php"),
+                _buildDetailRow("Patient name:",
+                    "${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
+                _buildDetailRow("Patient email:", booking['patients']['email']),
+                _buildDetailRow(
+                    "Patient phone number:", booking['patients']['phone']),
+                _buildDetailRow(
+                    "Service date booked:", formatDateTime(booking['date'])),
                 const SizedBox(height: 20),
                 const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
@@ -268,30 +266,29 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                     ? const Center(child: CircularProgressIndicator())
                     : bill != null
                         ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Bill Details:",
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Bill Details:",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                  "Service Price: ${bill!['service_price']} php"),
-                              const SizedBox(height: 4),
-                              Text(
-                                  "Doctor's fee: ${bill!['doctor_fee']} php"),
-                              const SizedBox(height: 4),
-                              Text(
-                                  "Medicine fee: ${bill!['medicine_fee']} php"),
-                              const SizedBox(height: 4),
-                              Text("Received: ${bill!['recieved_money']} php"),
-                              const SizedBox(height: 4),
-                              Text("Change: ${bill!['bill_change']} php"),
-                            ],
-                          )
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Each label/value pair is a Row
+                            _buildDetailRow("Service name:", booking['services']['service_name']),
+                            _buildDetailRow("Service Price:", "${bill!['service_price']}"),
+                            _buildDetailRow("Medicine fee:", "${bill!['medicine_fee']}"),
+                            _buildDetailRow("Additional fee:", "${bill!['doctor_fee']}"),
+                            _buildDetailRow("Payment Method:", "${bill!['payment_mode']}"),
+                            _buildDetailRow("Total Amount:", "${bill!['total_amount']}"),
+                            _buildDetailRow("Received:", "${bill!['recieved_money']}"),
+                            _buildDetailRow("Change:", "${bill?['bill_change'] ?? 'None'}"),
+                          ],
+                        )
                         : const Text(
                             "No bill found for this booking.",
                             style: TextStyle(color: Colors.white),
@@ -431,6 +428,48 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     );
   }
 }
+
+Widget _buildDetailRow(
+  String label,
+  String value, {
+  TextStyle? labelStyle,
+  TextStyle? valueStyle,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: labelStyle ??
+                const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            style: valueStyle ??
+                const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
   const FullScreenImage({super.key, required this.imageUrl});

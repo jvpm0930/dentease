@@ -82,24 +82,23 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Service name: ${booking['services']['service_name']}",
-                  style: const TextStyle(
+                _buildDetailRow(
+                  "Service name:",
+                  booking['services']['service_name'],
+                  labelStyle: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
-                Text("Service price: ${booking['services']['service_price']} php"),
-                const SizedBox(height: 8),
-                Text("Clinic name: ${booking['clinics']['clinic_name']}"),
-                const SizedBox(height: 8),
-                Text(
-                    "Patient name: ${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
-                const SizedBox(height: 8),
-                Text("Patient email: ${booking['patients']['email']}"),
-                const SizedBox(height: 8),
-                Text("Patient phone #: ${booking['patients']['phone']}"),
-                const SizedBox(height: 8),
-                Text("Service date booked: ${formatDateTime(booking['date'])}"),
+                _buildDetailRow("Service Price:",
+                    booking['services']['service_price']?.toString() ?? "N/A"),
+                _buildDetailRow("Clinic name:", "${booking['clinics']['clinic_name']}"),
+                _buildDetailRow(
+                    "Patient name:", "${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
+                _buildDetailRow(
+                    "Patient email:", "${booking['patients']['email']}"),
+                _buildDetailRow(
+                    "Patient phone number:", "${booking['patients']['phone']}"),
+                _buildDetailRow(
+                    "Service date booked:", formatDateTime(booking['date'])),
                 const SizedBox(height: 20),
                 const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
@@ -117,15 +116,22 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                                     color: Colors.black),
                               ),
                               const SizedBox(height: 8),
-                              Text("Service Price: ${bill!['service_price']} php"),
-                              const SizedBox(height: 4),
-                              Text("Doctor's fee:  ${bill!['doctor_fee']} php"),
-                              const SizedBox(height: 4),
-                              Text("Medicine fee:  ${bill!['medicine_fee']} php"),
-                              const SizedBox(height: 4),
-                              Text("Received:      ${bill!['recieved_money']} php"),
-                              const SizedBox(height: 4),
-                              Text("Change:        ${bill!['bill_change']} php"),
+                              _buildDetailRow("Service name:",
+                                  booking['services']['service_name']),
+                              _buildDetailRow("Service Price:",
+                                  "${bill!['service_price']}"),
+                              _buildDetailRow(
+                                  "Medicine fee:", "${bill!['medicine_fee']}"),
+                              _buildDetailRow(
+                                  "Additional fee:", "${bill!['doctor_fee']}"),
+                              _buildDetailRow("Payment Method:",
+                                  "${bill!['payment_mode']}"),
+                              _buildDetailRow(
+                                  "Total Amount:", "${bill!['total_amount']}"),
+                              _buildDetailRow(
+                                  "Received:", "${bill!['recieved_money']}"),
+                              _buildDetailRow("Change:",
+                                  "${bill?['bill_change'] ?? 'None'}"),
                             ],
                           )
                         : const Text(
@@ -239,6 +245,48 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
     );
   }
 }
+
+Widget _buildDetailRow(
+  String label,
+  String value, {
+  TextStyle? labelStyle,
+  TextStyle? valueStyle,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: labelStyle ??
+                const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            style: valueStyle ??
+                const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
   const FullScreenImage({super.key, required this.imageUrl});

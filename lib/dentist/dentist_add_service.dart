@@ -31,24 +31,43 @@ class _DentistAddServiceState extends State<DentistAddService> {
     _fetchDiseases();
   }
 
-  /// 🔹 Fetch diseases (id + name)
+  ///  Fetch diseases (id + name)
   Future<void> _fetchDiseases() async {
-    try {
-      final response =
-          await supabase.from('disease').select('disease_id, disease_name');
+  try {
+    final response =
+        await supabase.from('disease').select('disease_id, disease_name');
 
-      setState(() {
-        diseases = (response as List)
-            .map((d) => {
-                  'id': d['disease_id'] as String,
-                  'name': d['disease_name'] as String,
-                })
-            .toList();
-      });
-    } catch (e) {
-      _showSnackbar("Error fetching diseases: $e");
+    // Convert to List<Map<String, dynamic>>
+    final fetchedDiseases = (response as List)
+        .map((d) => {
+              'id': d['disease_id'].toString(),
+              'name': d['disease_name'].toString(),
+            })
+        .toList();
+
+    //  Sort alphabetically by name
+    fetchedDiseases.sort((a, b) => a['name']!.compareTo(b['name']!));
+
+    //  Ensure "None" is always at the top
+    final noneItem = fetchedDiseases.firstWhere(
+      (d) => d['name']!.toLowerCase() == 'none',
+      orElse: () => {},
+    );
+
+    if (noneItem.isNotEmpty) {
+      fetchedDiseases.remove(noneItem);
+      fetchedDiseases.insert(0, noneItem);
     }
+
+    // Update state
+    setState(() {
+      diseases = fetchedDiseases;
+    });
+  } catch (e) {
+    _showSnackbar("Error fetching diseases");
   }
+}
+
 
   /// 🔹 Insert service
   Future<void> signUp() async {
@@ -115,18 +134,14 @@ class _DentistAddServiceState extends State<DentistAddService> {
                 ),
                 const SizedBox(height: 10),
                 _buildTextField(
-                    servPriceController, 'Service Price', Icons.money,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly, // Allow digits only
-                  ],
+                    servPriceController, 'Service Price', Icons.money, isMultiline: true
                 ),
                 const SizedBox(height: 10),
                 _buildTextField(
                     servDetController, 'Service Details', Icons.info, isMultiline:true ),
                 const SizedBox(height: 10),
 
-                /// 🔹 Dropdown showing disease_name but storing disease_id
+                /// Dropdown showing disease_name but storing disease_id
                 DropdownButtonFormField<String>(
                   value: selectedDiseaseId,
                   items: diseases
@@ -141,7 +156,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
                     });
                   },
                   decoration: const InputDecoration(
-                    labelText: "Select Disease",
+                    labelText: "Select Oral Problem",
                     prefixIcon:
                         Icon(Icons.coronavirus , color: Colors.indigo),
                   ),
@@ -161,7 +176,6 @@ class _DentistAddServiceState extends State<DentistAddService> {
       TextEditingController controller,
       String hint,
       IconData icon, {
-      TextInputType keyboardType = TextInputType.text,
       bool readOnly = false,
       bool isPassword = false,
       bool isMultiline = false,

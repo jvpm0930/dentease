@@ -30,12 +30,12 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     final diseaseResponse = await Supabase.instance.client
         .from('disease')
         .select('disease_id, description')
-        .eq('disease_name', label)
+        .eq('disease_name', label.trim())
         .single();
 
     final diseaseId = diseaseResponse['disease_id'];
 
-    // ✅ Fetch only active services
+    // Fetch only active services
     final serviceResponse = await Supabase.instance.client
         .from('services')
         .select('service_name, service_price, clinic_id, status')
@@ -96,17 +96,23 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       confidence = (recognitions[0]['confidence'] * 100);
       label = recognitions[0]['label'].toString();
 
-      // Only accept if it's one of your 3 known diseases
+      // Only accept if it's one of your known diseases
       const validDiseases = [
-        "tooth discoloration",
-        "gengivitis",
-        "calculus",
+        "Chipped or Fractured",
+        "Gingivitis",
+        "Malocclusion",
+        "Plaque and Tartar",
+        "Tooth Caries",
+        "Tooth Discoloration",
+        "Tooth Erosion",
       ];
 
-      // Confidence threshold (e.g., 80%)
+      // Confidence threshold (e.g., 50%)
       const double confidenceThreshold = 50.0;
 
-      if (validDiseases.contains(label.toLowerCase()) &&
+      if (validDiseases
+              .map((e) => e.toLowerCase())
+              .contains(label.toLowerCase()) &&
           confidence >= confidenceThreshold) {
         fetchDiseaseDescription(label);
       } else {
@@ -149,17 +155,23 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       confidence = (recognitions[0]['confidence'] * 100);
       label = recognitions[0]['label'].toString();
 
-      // Only accept if it's one of your 3 known diseases
+      // Only accept if it's one of your known diseases
       const validDiseases = [
-        "tooth discoloration",
-        "gengivitis",
-        "calculus",
+        "Chipped or Fractured",
+        "Gingivitis",
+        "Malocclusion",
+        "Plaque and Tartar",
+        "Tooth Caries",
+        "Tooth Discoloration",
+        "Tooth Erosion",
       ];
 
-      // Confidence threshold (e.g., 80%)
-      const double confidenceThreshold = 80.0;
+      // Confidence threshold (e.g., 50%)
+      const double confidenceThreshold = 50.0;
 
-      if (validDiseases.contains(label.toLowerCase()) &&
+      if (validDiseases
+              .map((e) => e.toLowerCase())
+              .contains(label.toLowerCase()) &&
           confidence >= confidenceThreshold) {
         fetchDiseaseDescription(label);
       } else {

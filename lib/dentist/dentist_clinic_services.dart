@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dentease/dentist/dentist_add_service.dart';
 import 'package:dentease/dentist/dentist_service_details.dart';
 import 'package:dentease/widgets/dentistWidgets/dentist_footer.dart';
@@ -75,15 +77,49 @@ class _DentistServListPageState extends State<DentistServListPage> {
   }
 
   Future<void> _deleteService(String id) async {
-    await supabase.from('services').delete().eq('service_id', id);
+    try {
+      // Step 1: Check if the service is linked to any bills
+      final billResponse =
+          await supabase.from('bills').select('bill_id').eq('service_id', id);
 
-    setState(() {
-      services.removeWhere((service) => service['service_id'] == id);
-    });
+      if (billResponse.isNotEmpty) {
+        // If linked, show an error message and stop
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cannot delete: This service is linked to existing bills.',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Service deleted successfully!')),
-    );
+      // Step 2: If not linked, delete the service
+      await supabase.from('services').delete().eq('service_id', id);
+
+      // Step 3: Update the local list
+      setState(() {
+        services.removeWhere((service) => service['service_id'] == id);
+      });
+
+      // Step 4: Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Service deleted successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Handle unexpected errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting service: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -140,7 +176,9 @@ class _DentistServListPageState extends State<DentistServListPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                    "Price: ${service['service_price'] ?? 'N/A'} php"),
+                                    "Price: ${service['service_price'] ?? 'N/A'}"
+                                        .trim()
+                              ),
                                 Text(
                                   "Status: ${service['status']}",
                                   style: TextStyle(

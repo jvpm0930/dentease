@@ -34,7 +34,7 @@ class _StaffBookingApprvPageState extends State<StaffBookingApprvPage> {
   Future<List<Map<String, dynamic>>> _fetchBookings() async {
     final response = await supabase
         .from('bookings')
-        .select('booking_id, patient_id, service_id, clinic_id, date, status, patients(firstname, lastname, email, phone), services(service_name, service_price)')
+        .select('booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, patients(firstname, lastname, email, phone), services(service_name, service_price)')
         .eq('status', 'approved')
         .eq('clinic_id', widget.clinicId); // Filters bookings by clinicId
 

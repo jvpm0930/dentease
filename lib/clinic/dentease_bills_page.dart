@@ -35,16 +35,50 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
   bool loading = true;
   String? patientName;
 
+  String? selectedPaymentMode;
+  final List<String> paymentModes = ['Cash', 'GCash', 'PayMaya', 'Go Tyme', 'Bank Transfer',
+    'Others'
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadBill();
     _loadPatientName();
-    servicePriceController.addListener(_calculateChange);
-    doctorFeeController.addListener(_calculateChange);
-    medicineFeeController.addListener(_calculateChange);
+
     receivedMoneyController.addListener(_calculateChange);
   }
+
+  bool _hasShownWarning = false;
+
+  void _calculateChange() {
+    final total = double.tryParse(totalAmountController.text) ?? 0;
+    final received = double.tryParse(receivedMoneyController.text) ?? 0;
+
+    if (received < total && !_hasShownWarning) {
+      _hasShownWarning = true; // prevent multiple SnackBars
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              "Received money must be greater than or equal to total amount."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      setState(() => change = null);
+      Future.delayed(const Duration(seconds: 2), () {
+        _hasShownWarning = false;
+      });
+      return;
+    }
+
+    if (received >= total) {
+      setState(() {
+        change = received - total;
+      });
+    }
+  }
+
+
 
   Future<void> _loadPatientName() async {
     try {
@@ -62,20 +96,6 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         patientName = "Unknown Patient";
       });
     }
-  }
-
-  void _calculateChange() {
-    final price = double.tryParse(servicePriceController.text) ?? 0;
-    final doctorFee = double.tryParse(doctorFeeController.text) ?? 0;
-    final medicineFee = double.tryParse(medicineFeeController.text) ?? 0;
-    final received = double.tryParse(receivedMoneyController.text);
-
-    final total = price + doctorFee + medicineFee;
-    totalAmountController.text = total.toStringAsFixed(2); // show total
-
-    setState(() {
-      change = (received != null) ? received - total : null;
-    });
   }
 
 
@@ -109,10 +129,10 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
   Future<void> _submitBill() async {
     final serviceName = serviceNameController.text.trim();
-    final servicePrice = double.tryParse(servicePriceController.text) ?? 0;
-    final medicineFee = double.tryParse(medicineFeeController.text) ?? 0;
-    final doctorFee = double.tryParse(doctorFeeController.text) ?? 0;
-    final receivedMoney = double.tryParse(receivedMoneyController.text);
+    final servicePrice = servicePriceController.text.trim();
+    final medicineFee = medicineFeeController.text.trim();
+    final doctorFee = doctorFeeController.text.trim();
+    final receivedMoney = receivedMoneyController.text;
 
     if (serviceName.isEmpty || servicePrice == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,13 +159,22 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
       }
 
       // Safely calculate total and change
-      final totalAmount = servicePrice + medicineFee + doctorFee;
-      double? billChange;
-      if (receivedMoney != null) {
-        billChange = receivedMoney - totalAmount;
+      final receivedMoney = double.tryParse(receivedMoneyController.text) ?? 0;
+      final totalAmount = double.tryParse(totalAmountController.text) ?? 0;
+
+      if (receivedMoney < totalAmount) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Received money must be greater than total amount."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
       }
 
-      final billData = {
+      final billChange = receivedMoney - totalAmount;
+
+      final Map<String, dynamic> billData = {
         'service_id': widget.serviceId,
         'service_name': serviceName,
         'service_price': servicePrice,
@@ -155,13 +184,19 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         'patient_id': widget.patientId,
         'booking_id': widget.bookingId,
         'total_amount': totalAmount,
+        'recieved_money': receivedMoney,
+        'bill_change': billChange,
+        'payment_mode': selectedPaymentMode,
       };
 
-      if (receivedMoney != null) {
-        billData['recieved_money'] = receivedMoney;
-        billData['bill_change'] = billChange ?? 0;
+
+      if (selectedPaymentMode != null) {
+        billData['payment_mode'] = selectedPaymentMode;
       }
 
+      billData['recieved_money'] = receivedMoney;
+      billData['bill_change'] = billChange ?? 0;
+    
       // Insert to Supabase
       await supabase.from('bills').insert(billData);
 
@@ -205,7 +240,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         appBar: AppBar(
           title: Text(
             "Bill for ${patientName ?? 'Loading...'}",
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -214,66 +249,111 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         ),
         body: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              _buildTextField(
-                  serviceNameController, 'Service Name', Icons.design_services, readOnly: true,
-              ),
-              const SizedBox(height: 12),
-              _buildTextField(
-                  servicePriceController, 'Service Price', Icons.money,
-                  number: true, readOnly: true,
-              ),
-              const SizedBox(height: 12),
-              _buildTextField(
-                  doctorFeeController, 'Doctor Fee', Icons.money,
-                  number: true),
-              const SizedBox(height: 12),
-              _buildTextField(
-                  medicineFeeController, 'Medicine Fee', Icons.money,
-                  number: true),
-              const SizedBox(height: 12),
-              _buildTextField(
-                totalAmountController,
-                'Total Amount',
-                Icons.calculate,
-                number: true,
-                readOnly: true, // make it not editable
-              ),
-              const SizedBox(height: 12),
-              _buildTextField(receivedMoneyController, 'Received Money',
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTextField(
+                  serviceNameController,
+                  'Service Name',
+                  Icons.design_services,
+                  readOnly: true,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  servicePriceController,
+                  'Service Price',
+                  Icons.money,
+                  number: true,
+                  readOnly: true,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  medicineFeeController,
+                  'Medicine Fee',
+                  Icons.money,
+                  number: true,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  doctorFeeController,
+                  'Additional Fee',
+                  Icons.money,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  minLines: 1, // starting height
+                  maxLines: 5,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  totalAmountController,
+                  'Total Amount',
+                  Icons.calculate,
+                  number: true,
+                  readOnly: false,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedPaymentMode,
+                  items: paymentModes
+                      .map((mode) => DropdownMenuItem(
+                            value: mode,
+                            child: Text(mode),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedPaymentMode = value;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    labelText: "Mode of Payment",
+                    prefixIcon: const Icon(Icons.payment),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  receivedMoneyController,
+                  'Received Money',
                   Icons.money_rounded,
-                  number: true),
-              const SizedBox(height: 20),
-              if (change != null)
-                Text(
-                  "Change: PHP ${change!.toStringAsFixed(2)}",
-                  style: const TextStyle(
+                  number: true,
+                ),
+                const SizedBox(height: 20),
+                if (change != null)
+                  Text(
+                    "Change: PHP ${change!.toStringAsFixed(2)}",
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black),
-                ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submitBill,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                      color: Colors.black,
+                    ),
                   ),
-                  child: const Text(
-                    "Submit Bill",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submitBill,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text(
+                      "Submit Bill",
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
                   ),
                 ),
-              )
-            ],
+                const SizedBox(height: 50),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
 
   Widget _buildTextField(
     TextEditingController controller,
@@ -281,13 +361,21 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     IconData icon, {
     bool number = false,
     bool readOnly = false,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    int? minLines,
+    int? maxLines,
   }) {
     return TextField(
       controller: controller,
       readOnly: readOnly,
-      keyboardType: number
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
+      keyboardType: keyboardType ??
+          (number
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : TextInputType.text),
+      textInputAction: textInputAction,
+      minLines: minLines,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),

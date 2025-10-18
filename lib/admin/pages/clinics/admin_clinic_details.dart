@@ -255,7 +255,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                         const Divider(thickness: 1.5, color: Colors.blueGrey),
                         const SizedBox(height: 20),
                         const Text(
-                          'License Image:',
+                          'PRC Certificate Image:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -294,7 +294,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           )
                         else
                           const Text(
-                            "No license image is available.",
+                            "No PRC Certificate image is available.",
                             style: TextStyle(
                               fontSize: 16,
                               fontStyle: FontStyle.italic,
@@ -303,7 +303,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Permit Image:',
+                          'DTI Permit Image:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -342,7 +342,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           )
                         else
                           const Text(
-                            "No permit image is available.",
+                            "No DTI Permit image is available.",
                             style: TextStyle(
                               fontSize: 16,
                               fontStyle: FontStyle.italic,
@@ -351,7 +351,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Office Image:',
+                          'Workplace Image:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -389,7 +389,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           )
                         else
                           const Text(
-                            "No permit image is available.",
+                            "No Workplace image is available.",
                             style: TextStyle(
                               fontSize: 16,
                               fontStyle: FontStyle.italic,

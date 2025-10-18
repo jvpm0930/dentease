@@ -182,7 +182,7 @@ import 'package:flutter/material.dart';
                       onPressed: _selectAddress,
                       child: Text(
                         selectedAddress ?? 'Select Address on Map',
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -193,7 +193,7 @@ import 'package:flutter/material.dart';
                     onPressed: () => _pickImage("license"),
                     icon: const Icon(Icons.upload_file),
                     label: const Text(
-                      'Upload License Image',
+                      'PRC Certificate Image',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -207,7 +207,7 @@ import 'package:flutter/material.dart';
                 if (licenseImage != null) const SizedBox(height: 8),
                 if (licenseImage != null)
                   const Text(
-                    'License image selected.',
+                    'PRC Certificate image selected.',
                     style: TextStyle(color: Colors.black),
                   ),
                 const SizedBox(height: 16),
@@ -217,7 +217,7 @@ import 'package:flutter/material.dart';
                     onPressed: () => _pickImage("permit"),
                     icon: const Icon(Icons.upload_file),
                     label: const Text(
-                      'Upload Permit Image',
+                      'DTI Permit Image',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -231,7 +231,7 @@ import 'package:flutter/material.dart';
                 if (permitImage != null) const SizedBox(height: 8),
                 if (permitImage != null)
                   const Text(
-                    'Permit image selected.',
+                    'DTI Permit image selected.',
                     style: TextStyle(color: Colors.black),
                   ),
                 const SizedBox(height: 16),
@@ -241,7 +241,7 @@ import 'package:flutter/material.dart';
                     onPressed: () => _pickImage("office"),
                     icon: const Icon(Icons.upload_file),
                     label: const Text(
-                      'Upload Office Image',
+                      'Workplace Image',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -255,7 +255,7 @@ import 'package:flutter/material.dart';
                 if (officeImage != null) const SizedBox(height: 8),
                 if (officeImage != null)
                   const Text(
-                    'Office image selected.',
+                    'Office Workplace selected.',
                     style: TextStyle(color: Colors.black),
                   ),
                   const SizedBox(height: 24),

@@ -26,8 +26,10 @@ class _EditBillPageState extends State<EditBillPage> {
   final TextEditingController doctorFeeController = TextEditingController();
   final TextEditingController medicineFeeController = TextEditingController();
   final TextEditingController receivedMoneyController = TextEditingController();
+  final TextEditingController totalController = TextEditingController();
+  final TextEditingController changeController = TextEditingController();
 
-  double? change;
+  String? selectedPaymentMode;
   String? billId;
   bool loading = true;
 
@@ -36,26 +38,26 @@ class _EditBillPageState extends State<EditBillPage> {
     super.initState();
     _loadBill();
 
-    servicePriceController.addListener(_calculateChange);
-    doctorFeeController.addListener(_calculateChange);
-    medicineFeeController.addListener(_calculateChange);
+    totalController.addListener(_calculateChange);
     receivedMoneyController.addListener(_calculateChange);
   }
 
   void _calculateChange() {
-    final price = double.tryParse(servicePriceController.text);
-    final doctorfee = double.tryParse(doctorFeeController.text);
-    final medicincefee = double.tryParse(medicineFeeController.text);
-    final received = double.tryParse(receivedMoneyController.text);
+    final total = double.tryParse(totalController.text) ?? 0;
+    final received = double.tryParse(receivedMoneyController.text) ?? 0;
 
-    setState(() {
-      change = (price != null &&
-              received != null &&
-              doctorfee != null &&
-              medicincefee != null)
-          ? (received - (price + doctorfee + medicincefee))
-          : null;
-    });
+    // Only calculate if received >= total
+    if (received >= total) {
+      final change = received - total;
+      setState(() {
+        changeController.text = change.toStringAsFixed(2);
+      });
+    } else {
+      // Clear change if received is less than total
+      setState(() {
+        changeController.text = '';
+      });
+    }
   }
 
   Future<void> _loadBill() async {
@@ -67,46 +69,54 @@ class _EditBillPageState extends State<EditBillPage> {
           .maybeSingle();
 
       if (result != null) {
-        billId = result['id'].toString(); // assuming 'id' is the primary key
+        billId = result['id']?.toString();
         serviceNameController.text = result['service_name'] ?? '';
-        servicePriceController.text = result['service_price'].toString();
-        doctorFeeController.text = result['doctor_fee'].toString();
-        medicineFeeController.text = result['medicine_fee'].toString();
-        receivedMoneyController.text = result['recieved_money'].toString();
-        _calculateChange();
+        servicePriceController.text = result['service_price']?.toString() ?? '';
+        doctorFeeController.text = result['doctor_fee']?.toString() ?? '';
+        medicineFeeController.text = result['medicine_fee']?.toString() ?? '';
+        receivedMoneyController.text = result['recieved_money']?.toString() ?? '';
+        totalController.text = result['total_amount']?.toString() ?? '';
+        changeController.text = result['bill_change']?.toString() ?? '';
+        selectedPaymentMode = result['payment_mode'];
       }
+
 
       setState(() => loading = false);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading bill: ${e.toString()}")),
+        SnackBar(content: Text("Error loading bill: $e")),
       );
       setState(() => loading = false);
     }
+
   }
 
   Future<void> _updateBill() async {
     final serviceName = serviceNameController.text.trim();
-    final servicePrice = double.tryParse(servicePriceController.text);
-    final medicineFee = double.tryParse(medicineFeeController.text);
-    final doctorFee = double.tryParse(doctorFeeController.text);
+    final servicePrice = servicePriceController.text.trim();
+    final medicineFee = medicineFeeController.text.trim();
+    final doctorFee = doctorFeeController.text.trim();
     final receivedMoney = double.tryParse(receivedMoneyController.text);
+    final totalAmount = double.tryParse(totalController.text);
+    final billChange = double.tryParse(changeController.text);
 
-    //  Basic validation
     if (serviceName.isEmpty ||
-        servicePrice == null ||
-        medicineFee == null ||
-        doctorFee == null ||
-        receivedMoney == null) {
+        receivedMoney == null ||
+        totalAmount == null ||
+        billChange == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter valid inputs.")),
       );
       return;
     }
 
-    final totalAmount = servicePrice + medicineFee + doctorFee;
+    if (selectedPaymentMode == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a payment mode.")),
+      );
+      return;
+    }
 
-    // Validation for received money
     if (receivedMoney < totalAmount) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -115,8 +125,6 @@ class _EditBillPageState extends State<EditBillPage> {
       );
       return;
     }
-
-    final billChange = receivedMoney - totalAmount;
 
     try {
       await supabase.from('bills').update({
@@ -127,6 +135,7 @@ class _EditBillPageState extends State<EditBillPage> {
         'recieved_money': receivedMoney,
         'bill_change': billChange,
         'total_amount': totalAmount,
+        'payment_mode': selectedPaymentMode,
       }).eq('booking_id', widget.bookingId);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,17 +143,20 @@ class _EditBillPageState extends State<EditBillPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text("Error: Dind't update bill.")),
       );
     }
   }
-
 
   @override
   void dispose() {
     serviceNameController.dispose();
     servicePriceController.dispose();
+    doctorFeeController.dispose();
+    medicineFeeController.dispose();
     receivedMoneyController.dispose();
+    totalController.dispose();
+    changeController.dispose();
     super.dispose();
   }
 
@@ -154,7 +166,7 @@ class _EditBillPageState extends State<EditBillPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: Text(
+          title: const Text(
             "Edit Bill",
             style: TextStyle(color: Colors.white),
           ),
@@ -167,51 +179,109 @@ class _EditBillPageState extends State<EditBillPage> {
             ? const Center(child: CircularProgressIndicator())
             : Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    _buildTextField(serviceNameController, 'Service Name',
-                        Icons.design_services, readOnly: true),
-                    const SizedBox(height: 12),
-                    _buildTextField(servicePriceController, 'Service Price',
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildTextField(
+                        serviceNameController,
+                        'Service Name',
+                        Icons.design_services,
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        servicePriceController,
+                        'Service Price',
                         Icons.money,
-                        number: true, readOnly: true),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                        doctorFeeController, 'Doctor Fee', Icons.money,
-                        number: true),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                        medicineFeeController, 'Medicine Price', Icons.money,
-                        number: true),
-                    const SizedBox(height: 12),
-                    _buildTextField(receivedMoneyController, 'Received Money',
+                        number: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        medicineFeeController,
+                        'Medicine Fee',
+                        Icons.medication,
+                        number: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        doctorFeeController,
+                        'Additional Fee',
+                        Icons.person,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        minLines: 1, // starting height
+                        maxLines: 5,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: "Payment Mode",
+                          prefixIcon: const Icon(Icons.payment),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        value: selectedPaymentMode,
+                        items: const [
+                          DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+                          DropdownMenuItem(
+                              value: 'GCash', child: Text('GCash')),
+                          DropdownMenuItem(
+                              value: 'PayMaya', child: Text('PayMaya')),
+                          DropdownMenuItem(
+                              value: 'Go Tyme', child: Text('Go Tyme')),
+                          DropdownMenuItem(
+                              value: 'Bank Transfer',
+                              child: Text('Bank Transfer')),
+                          DropdownMenuItem(
+                              value: 'Others', child: Text('Others')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedPaymentMode = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        totalController,
+                        'Total Amount',
+                        Icons.calculate,
+                        number: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        receivedMoneyController,
+                        'Received Money',
                         Icons.money_rounded,
-                        number: true),
-                    const SizedBox(height: 20),
-                    if (change != null)
-                      Text(
-                        "Change: ${change!.toStringAsFixed(2)} php",
-                        style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black),
+                        number: true,
                       ),
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _updateBill,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          "Update Bill",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        changeController,
+                        'Change',
+                        Icons.change_circle,
+                        number: true,
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 30),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _updateBill,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text(
+                            "Update Bill",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
                         ),
                       ),
-                    )
-                  ],
+                      const SizedBox(height: 50),
+                    ],
+                  ),
                 ),
               ),
       ),
@@ -224,13 +294,21 @@ class _EditBillPageState extends State<EditBillPage> {
     IconData icon, {
     bool number = false,
     bool readOnly = false,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    int? minLines,
+    int? maxLines,
   }) {
     return TextField(
       controller: controller,
       readOnly: readOnly,
-      keyboardType: number
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
+      keyboardType: keyboardType ??
+          (number
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : TextInputType.text),
+      textInputAction: textInputAction,
+      minLines: minLines,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),

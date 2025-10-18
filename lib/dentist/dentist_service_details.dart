@@ -40,7 +40,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
       if (response != null) {
         setState(() {
           serviceName = response['service_name'] ?? '';
-          servicePrice = response['service_price']?.toString() ?? '';
+          servicePrice = response['service_price'] ?? '';
           serviceDetails = response['service_detail'] ?? '';
           serviceStatus = response['status'] ?? '';
           isLoading = false;
@@ -65,7 +65,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
     try {
       await supabase.from('services').update({
         'service_name': serviceName,
-        'service_price': double.tryParse(servicePrice) ?? 0,
+        'service_price': servicePrice,
         'service_detail' : serviceDetails,
         'status': serviceStatus
       }).eq('service_id', widget.serviceId);
@@ -129,13 +129,15 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
                               labelText: "Service Price (PHP)",
                               border: OutlineInputBorder(),
                             ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
                             onChanged: (value) => setState(() {
                               servicePrice = value;
                             }),
                             validator: (value) =>
                                 value!.isEmpty ? "Enter service price" : null,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.newline,
+                                minLines: null, // starting height
+                                maxLines: null,
                           ),
                           const SizedBox(height: 15),
                           TextFormField(

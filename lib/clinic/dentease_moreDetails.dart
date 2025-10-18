@@ -211,7 +211,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                   // license Image
                                   const Text(
-                                    'License Image:',
+                                    'PRC Certificate:',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -254,7 +254,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                     )
                                   else
                                     const Text(
-                                      "No license image available.",
+                                      "No PRC Certificate image available.",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontStyle: FontStyle.italic,
@@ -269,7 +269,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                   // Permit Image
                                   const Text(
-                                    'Permit Image:',
+                                    'DTI Permit Image:',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -312,7 +312,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                     )
                                   else
                                     const Text(
-                                      "No permit image available.",
+                                      "No DTI Permit image available.",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontStyle: FontStyle.italic,
@@ -327,7 +327,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                   // Office Image
                                   const Text(
-                                    'Office Image:',
+                                    'Workplace Image:',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -370,7 +370,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                     )
                                   else
                                     const Text(
-                                      "No office image available.",
+                                      "No Workplace image available.",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontStyle: FontStyle.italic,
