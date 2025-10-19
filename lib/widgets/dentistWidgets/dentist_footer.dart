@@ -1,3 +1,4 @@
+import 'package:dentease/clinic/models/clinicChat_support.dart';
 import 'package:dentease/dentist/dentist_bookings_pend.dart';
 import 'package:dentease/dentist/dentist_profile.dart';
 import 'package:dentease/dentist/dentist_page.dart';
@@ -62,7 +63,7 @@ class _DentistFooterState extends State<DentistFooter> {
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _buildNavImage(
                 'assets/icons/home.png',
@@ -73,6 +74,8 @@ class _DentistFooterState extends State<DentistFooter> {
                 DentistBookingPendPage(clinicId: widget.clinicId, dentistId: widget.dentistId)),
             _buildNavImage(
                 'assets/icons/chat.png', context, ClinicPatientChatList(clinicId: widget.clinicId)),
+            _buildNavImage(
+                'assets/icons/customer-service.png', context, ClinicChatPageforAdmin(clinicId: widget.clinicId, adminId: '')),
             _buildNavImage('assets/icons/profile.png', context,
                 DentistProfile(dentistId: widget.dentistId)),
           ],

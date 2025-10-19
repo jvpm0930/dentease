@@ -50,6 +50,7 @@ flutter:
     - assets/icons/calendar.png
     - assets/icons/profile.png
     - assets/icons/home.png
+    - assets/icons/customer-service.png
     - assets/profile.png
     - assets/clinic1.png
     - assets/clinic2.png

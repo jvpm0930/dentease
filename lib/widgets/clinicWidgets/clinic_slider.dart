@@ -147,25 +147,36 @@ class _ClinicCarouselState extends State<ClinicCarousel> {
                 topRight: Radius.circular(20),
               ),
             ),
-            child: profileUrl != null && profileUrl.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    child: Image.network(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+              child: profileUrl != null && profileUrl.isNotEmpty
+                  ? Image.network(
                       profileUrl,
                       width: 200,
                       height: 200,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.broken_image,
-                            size: 100, color: Colors.grey);
+                        // Show default asset if loading fails
+                        return Image.asset(
+                          'assets/clinic3.png',
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.cover,
+                        );
                       },
+                    )
+                  : Image.asset(
+                      'assets/clinic3.png',
+                      width: 200,
+                      height: 200,
+                      fit: BoxFit.cover,
                     ),
-                  )
-                : const Icon(Icons.image, size: 100, color: Colors.grey),
+            ),
           ),
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(10),

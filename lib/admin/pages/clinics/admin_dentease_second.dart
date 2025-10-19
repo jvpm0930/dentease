@@ -1,4 +1,5 @@
 import 'package:dentease/admin/pages/clinics/admin_clinic_reviews.dart';
+import 'package:dentease/clinic/models/adminChat_supportList.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import '../dentists/admin_clinic_dentist.dart';
@@ -105,6 +106,19 @@ class AdmClinicDashboardPage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) =>
                           AdmClinicReviews(clinicId: clinicId),
+                    ),
+                  );
+                },
+              ),
+              _buildCardButton(
+                title: 'Chat Support',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AdminSupportChatforClinic(clinicId: clinicId, adminId: '',
+                      ),
                     ),
                   );
                 },

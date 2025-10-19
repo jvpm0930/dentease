@@ -24,7 +24,7 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
     fetchPatients();
   }
 
-  Future<void> fetchPatients() async {
+  Future<void> fetchPatients() async {  
     try {
       final bookingResponse = await supabase
           .from('bookings')

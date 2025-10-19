@@ -134,7 +134,7 @@ class _ClinicFrontForDentStaffState extends State<ClinicFrontForDentStaff> {
                           .cover, // Use BoxFit.cover for filling without distortion
                       errorBuilder: (context, error, stackTrace) {
                         return Image.asset(
-                          'assets/logo2.png',
+                          'assets/clinic3.png',
                           width: 200,
                           height: 200,
                           fit: BoxFit.cover, // Same fit for fallback
@@ -142,7 +142,7 @@ class _ClinicFrontForDentStaffState extends State<ClinicFrontForDentStaff> {
                       },
                     )
                   : Image.asset(
-                      'assets/logo2.png',
+                      'assets/clinic3.png',
                       width: 200,
                       height: 200,
                       fit:
