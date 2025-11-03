@@ -142,7 +142,7 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                 const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
                 const Text(
-                  'Before Service Image:',
+                  'Receipt Image:',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -180,63 +180,16 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
                   )
                 else
                   const Text(
-                    "No before services image is available.",
+                    "No receipt image is available.",
                     style: TextStyle(
                       fontSize: 16,
                       fontStyle: FontStyle.italic,
                       color: Colors.grey,
                     ),
-                  ),
+                  ), 
                 const SizedBox(height: 20),
                 const Divider(thickness: 1.5, color: Colors.blueGrey),
                 const SizedBox(height: 20),
-                const Text(
-                  'After Service Image:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (booking['after_url'] != null &&
-                    (booking['after_url'] as String).isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FullScreenImage(
-                                imageUrl: booking['after_url'],
-                              ),
-                            ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            booking['after_url'],
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  const Text(
-                    "No after services image is available.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey,
-                    ),
-                  ),
-                const SizedBox(height: 50),
               ],
             ),
           ),

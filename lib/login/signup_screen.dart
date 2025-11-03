@@ -13,6 +13,8 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final firstnameController = TextEditingController();
   final lastnameController = TextEditingController();
+  final ageController = TextEditingController();
+  final genderController = TextEditingController();
   final phoneController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -32,59 +34,73 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return response != null; // If response is not null, email exists
   }
 
-  /// ** Sign-Up Function with Duplicate Checks**
   Future<void> signUp() async {
-    try {
-      final firstname = firstnameController.text.trim();
-      final lastname = lastnameController.text.trim();
-      final phone = phoneController.text.trim();
-      final email = emailController.text.trim();
-      final password = passwordController.text.trim();
+  try {
+    final firstname = firstnameController.text.trim();
+    final lastname = lastnameController.text.trim();
+    final age = ageController.text.trim(); // FIXED: you had emailController here before
+    final gender = genderController.text.trim(); // FIXED same issue
+    final phone = phoneController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
 
-      //  **Check for Empty Fields**
-      if (firstname.isEmpty ||
-          lastname.isEmpty ||
-          phone.isEmpty ||
-          email.isEmpty ||
-          password.isEmpty) {
-        _showSnackbar('Please fill in all fields.');
-        return;
-      }
-
-      //  **Check if Email Exists**
-      if (await _checkIfEmailExists(email)) {
-        _showSnackbar('Email already exists. Please use another email.');
-        return;
-      }
-
-      //  **Create User in Supabase Auth**
-      final authResponse = await supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
-
-      final userId = authResponse.user?.id;
-      if (userId == null) throw 'User creation failed';
-
-      //  **Store Additional User Info in Profiles Table**
-      await supabase.from('patients').insert({
-        'patient_id': userId,
-        'firstname': firstname,
-        'lastname': lastname,
-        'phone': phone,
-        'email': email,
-        'password': password,
-        'role': selectedRole, // Store selected role
-      });
-
-      //  **Success Message & Navigate to Login**
-      _showSnackbar('Signup successful! Please login.');
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => LoginScreen()));
-    } catch (e) {
-      _showSnackbar('Try Again');
+    //  **Check for Empty Fields**
+    if (firstname.isEmpty ||
+        lastname.isEmpty ||
+        age.isEmpty ||
+        gender.isEmpty ||
+        phone.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
+      _showSnackbar('Please fill in all fields.');
+      return;
     }
+
+    // **Validate email format**
+    if (!email.contains('@') || !email.contains('.')) {
+      _showSnackbar('Please enter a valid email address.');
+      return;
+    }
+
+    //  **Check if Email Exists**
+    if (await _checkIfEmailExists(email)) {
+      _showSnackbar('Email already exists. Please use another email.');
+      return;
+    }
+
+    // **Sign Up with Email Verification**
+    final authResponse = await supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
+
+    final userId = authResponse.user?.id;
+    if (userId == null) throw 'User creation failed';
+
+    //  **Insert user data into patients table**
+    await supabase.from('patients').insert({
+      'patient_id': userId,
+      'firstname': firstname,
+      'lastname': lastname,
+      'age': age,
+      'gender': gender,
+      'phone': phone,
+      'email': email,
+      'password': password,
+      'role': selectedRole,
+    });
+
+
+    // **Redirect to Login**
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  } catch (e) {
+    _showSnackbar('Signup failed: $e');
   }
+}
+
 
   /// ** Snackbar Message Helper**
   void _showSnackbar(String message) {
@@ -118,13 +134,55 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     _buildTextField(
                         lastnameController, 'Lastname', Icons.person),
                     SizedBox(height: 10),
+                    // AGE - styled same as other textfields
+                    _buildTextField(
+                      ageController,
+                      'Age',
+                      Icons.calculate,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SizedBox(height: 10),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: genderController.text.isNotEmpty
+                            ? genderController.text
+                            : null,
+                        decoration: InputDecoration(
+                          hintText: 'Gender',
+                          prefixIcon: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Icon(Icons.wc_rounded,
+                                color: Colors.indigo[900]),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 14),
+                        ),
+                        dropdownColor: Colors.white,
+                        items: const [
+                          DropdownMenuItem(value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(
+                              value: 'Female', child: Text('Female')),
+                          DropdownMenuItem(
+                              value: 'Not Specify', child: Text('Not Specify')),
+                        ],
+                        onChanged: (value) {
+                          genderController.text = value!;
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 10),
                     _buildTextField(
                         phoneController, 'Phone Number', Icons.phone),
                     SizedBox(height: 10),
                     _buildTextField(emailController, 'Email', Icons.mail,
                         keyboardType: TextInputType.emailAddress),
                     SizedBox(height: 10),
-                    _buildTextField(passwordController, 'Password', Icons.lock,
+                    _buildTextField(passwordController, 'Password (minimum of 6 digits)', Icons.lock,
                         isPassword: true),
                     SizedBox(height: 20),
                     _buildSignUpButton(),
@@ -189,7 +247,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.indigo[900], // Dark blue text
+            color: Colors.indigo, // Dark blue text
           ),
         ));
   }
@@ -209,7 +267,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             TextSpan(
               text: "Login",
               style: TextStyle(
-                color: Colors.indigo,
+                color: Colors.blueAccent,
                 fontWeight: FontWeight.bold,
               ),
             ),

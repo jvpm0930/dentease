@@ -5,12 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminSupportChatforClinic extends StatefulWidget {
   final String adminId;
-  final String clinicId;
 
   const AdminSupportChatforClinic({
     super.key,
     required this.adminId,
-    required this.clinicId,
   });
 
   @override
@@ -21,8 +19,7 @@ class AdminSupportChatforClinic extends StatefulWidget {
 class _AdminSupportChatforClinicState extends State<AdminSupportChatforClinic> {
   final supabase = Supabase.instance.client;
 
-  Map<String, dynamic>? clinic;
-  bool hasNewMessage = false;
+  List<Map<String, dynamic>> clinics = [];
   bool isLoading = true;
 
   @override
@@ -33,39 +30,19 @@ class _AdminSupportChatforClinicState extends State<AdminSupportChatforClinic> {
 
   Future<void> fetchClinicData() async {
     try {
-      // Fetch only the specific clinic
       final response = await supabase
           .from('clinics')
-          .select('clinic_id, clinic_name, email')
-          .eq('clinic_id', widget.clinicId)
-          .maybeSingle();
-
-      if (response == null) {
-        setState(() {
-          isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Clinic not found')),
-        );
-        return;
-      }
-
-      // Check if this clinic sent any unread messages to admin
-      final newMsgResponse = await supabase
-          .from('supports')
-          .select()
-          .eq('sender_id', widget.clinicId)
-          .eq('receiver_id', widget.adminId);
+          .select('clinic_id, clinic_name');
 
       setState(() {
-        clinic = response;
-        hasNewMessage = newMsgResponse.isNotEmpty;
+        clinics = List<Map<String, dynamic>>.from(response);
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching clinic: $e')),
+        SnackBar(content: Text('Error fetching clinics: $e')),
       );
     }
   }
@@ -87,69 +64,55 @@ class _AdminSupportChatforClinicState extends State<AdminSupportChatforClinic> {
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : clinic == null
+            : clinics.isEmpty
                 ? const Center(
                     child: Text(
-                      "Clinic not found",
+                      "No clinics found",
                       style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   )
-                : Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      color: Colors.white.withOpacity(0.9),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        title: Text(
-                          clinic!['clinic_name'] ?? 'Unknown',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: clinics.length,
+                    itemBuilder: (context, index) {
+                      final clinic = clinics[index];
+
+                      return Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        subtitle: Text(
-                          clinic!['email'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
+                        color: Colors.white.withOpacity(0.9),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          title: Text(
+                            clinic['clinic_name'] ?? 'Unknown',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
-                        /*
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.chat_bubble, color: Colors.blue),
-                            if (hasNewMessage)
-                              const Text(
-                                'New message',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                          trailing: const Icon(
+                            Icons.chat_bubble_outline,
+                            color: Colors.blue,
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AdminSupportChatPage(
+                                  clinicId: clinic['clinic_id'],
+                                  clinicName: clinic['clinic_name'],
+                                  adminId: widget.adminId,
                                 ),
                               ),
-                          ],
-                        ),*/
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AdminSupportChatPage(
-                                clinicId: widget.clinicId,
-                                clinicName: clinic!['clinic_name'],
-                                adminId: widget.adminId,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
       ),
     );

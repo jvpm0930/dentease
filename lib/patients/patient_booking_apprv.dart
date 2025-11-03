@@ -34,7 +34,7 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
       _bookingsFuture = supabase
           .from('bookings')
           .select('booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, services(service_name, service_price), clinics(clinic_name), patients(firstname, lastname, email, phone)')
-          .eq('status', 'approved')
+          .or('status.eq.approved, status.eq.completed')
           .eq('patient_id', widget.patientId);
     });
   }
@@ -152,10 +152,15 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
                                     "Date: ${formatDateTime(booking['date'])}"),
                                 Text(
                                     "Clinic: ${booking['clinics']['clinic_name']}"),
-                                Text("Status: ${booking['status']}",
-                                    style: TextStyle(
-                                    color: Colors.blue,
+                                Text(
+                                  "Status: ${booking['status']}",
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
+                                    color: booking['status'] == 'approved'
+                                        ? Colors.blue
+                                        : booking['status'] == 'completed'
+                                            ? Colors.green
+                                            : Colors.black, // default color
                                   ),
                                 ),
                               ],

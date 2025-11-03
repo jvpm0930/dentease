@@ -1,3 +1,4 @@
+import 'package:dentease/clinic/dentease_patientListV2.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dentease/widgets/background_cont.dart';
@@ -130,6 +131,27 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
                                         ], 
                                       ),
                                       leading: const Icon(Icons.person),
+                                      trailing: GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  DentistBookingPatientPage(
+                                                patientId: patient[
+                                                    'patient_id'],
+                                                clinicId: widget.clinicId,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.only(right: 10),
+                                          child: Icon(Icons.info,
+                                              color: Colors.blue),
+                                        ),
+                                      ),
+
                                     ),
                                   );
                                 },

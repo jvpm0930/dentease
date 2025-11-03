@@ -1,5 +1,6 @@
 import 'package:dentease/admin/pages/clinics/admin_dentease_first.dart';
 import 'package:dentease/admin/pages/clinics/admin_dentease_rejected.dart';
+import 'package:dentease/widgets/adminWidgets/admin_footer.dart';
 import 'package:dentease/widgets/adminWidgets/admin_header.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
@@ -165,6 +166,7 @@ class _AdminPagev2State extends State<AdminPagev2> {
             ),
           ],
         ),
+        bottomNavigationBar: const AdminFooter(),
       ),
     );
   }

@@ -1,10 +1,8 @@
 import 'package:dentease/admin/pages/clinics/admin_clinic_reviews.dart';
-import 'package:dentease/clinic/models/adminChat_supportList.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import '../dentists/admin_clinic_dentist.dart';
 import 'admin_clinic_details.dart';
-import '../patients/admin_clinic_patient.dart';
 import '../staffs/admin_clinic_staff.dart';
 
 class AdmClinicDashboardPage extends StatelessWidget {
@@ -75,6 +73,7 @@ class AdmClinicDashboardPage extends StatelessWidget {
                   );
                 },
               ),
+              /*
               _buildCardButton(
                 title: 'Patients',
                 onTap: () {
@@ -86,7 +85,7 @@ class AdmClinicDashboardPage extends StatelessWidget {
                     ),
                   );
                 },
-              ),
+              ),*/
               _buildCardButton(
                 title: 'Details',
                 onTap: () {
@@ -110,6 +109,7 @@ class AdmClinicDashboardPage extends StatelessWidget {
                   );
                 },
               ),
+              /*
               _buildCardButton(
                 title: 'Chat Support',
                 onTap: () {
@@ -117,12 +117,12 @@ class AdmClinicDashboardPage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          AdminSupportChatforClinic(clinicId: clinicId, adminId: '',
+                          AdminSupportChatforClinic(clinicId: clinicId, adminId: 'eee5f574-903b-4575-a9d9-2f69e58f1801',
                       ),
                     ),
                   );
                 },
-              ),
+              ),*/
             ],
           ),
         ),

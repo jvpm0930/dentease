@@ -195,12 +195,19 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                         ),
                         const SizedBox(height: 16),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Icon(Icons.info, color: Colors.indigo),
                             const SizedBox(width: 8),
-                            Text(
-                              clinicDetails!['info'] ?? 'No info provided',
-                              style: const TextStyle(fontSize: 16),
+                            Expanded(
+                              // allows the text to wrap properly
+                              child: Text(
+                                clinicDetails!['info'] ?? 'No info provided',
+                                style: const TextStyle(fontSize: 16),
+                                softWrap: true, // optional, ensures wrapping
+                                overflow: TextOverflow
+                                    .visible, // makes sure text is fully shown
+                              ),
                             ),
                           ],
                         ),
@@ -255,7 +262,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                         const Divider(thickness: 1.5, color: Colors.blueGrey),
                         const SizedBox(height: 20),
                         const Text(
-                          'PRC Certificate Image:',
+                          'PRC Credentials:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -294,7 +301,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           )
                         else
                           const Text(
-                            "No PRC Certificate image is available.",
+                            "No PRC License image is available.",
                             style: TextStyle(
                               fontSize: 16,
                               fontStyle: FontStyle.italic,
@@ -303,7 +310,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           ),
                         const SizedBox(height: 8),
                         const Text(
-                          'DTI Permit Image:',
+                          'DTI Permit:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -351,7 +358,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                           ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Workplace Image:',
+                          'Workplace:',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

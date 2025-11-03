@@ -15,6 +15,8 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
   final clinicnameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
 
   final supabase = Supabase.instance.client;
 
@@ -80,6 +82,9 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
     } catch (e) {
       _showSnackbar('Error: $e');
     }
+    if (!_formKey.currentState!.validate()) {
+      return; // Stop if validation fails
+    }
   }
 
   /// **🔹 Snackbar Message Helper**
@@ -96,60 +101,81 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
             body: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(
+                child: Column(  
                   children: [
-                    const SizedBox(height: 30), // App Logo
-                    const Text(
-                      'Clinic Details',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          _buildTextField(clinicnameController, 'Clinic Name',
+                              Icons.local_hospital),
+                          const SizedBox(height: 10),
+                          Text(
+                            '* Recommended to not use your personal Email *',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildTextField(
+                              emailController, 'Clinic Email', Icons.mail,
+                              keyboardType: TextInputType.emailAddress),
+                          const SizedBox(height: 10),
+                          _buildTextField(phoneController,
+                              'Clinic Contact Number', Icons.phone),
+                          const SizedBox(height: 20),
+                          _buildSignUpButton(Icons.arrow_left),
+                          _buildLoginTextButton(),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _buildTextField(clinicnameController, 'Clinic Name',
-                        Icons.local_hospital),
-                    const SizedBox(height: 10),
-                    Text(
-                      '* Recommended to not use your personal Email *',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildTextField(emailController, 'Clinic Email', Icons.mail,
-                        keyboardType: TextInputType.emailAddress),
-                    const SizedBox(height: 10),
-                    _buildTextField(phoneController, 'Clinic Contact Number', Icons.phone),
-                    const SizedBox(height: 20),
-                    _buildSignUpButton(Icons.arrow_left),
-                    _buildLoginTextButton(),
                   ],
                 ),
               ),
             )));
   }
 
-  /// **🔹 Reusable TextField Widget**
   Widget _buildTextField(
-      TextEditingController controller, String hint, IconData icon,
-      {bool isPassword = false,
-      TextInputType keyboardType = TextInputType.text}) {
-    return TextField(
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
+    bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextFormField(
       controller: controller,
       obscureText: isPassword,
       keyboardType: keyboardType,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Icon(icon, color: Colors.indigo[900]),
         ),
+        errorStyle: const TextStyle(color: Colors.redAccent),
       ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'This field is required';
+        }
+
+        // Email validation using regex
+        if (hint.contains('Email')) {
+          final emailRegex = RegExp(
+            r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,}$',
+          );
+
+          if (!emailRegex.hasMatch(value)) {
+            return 'Please enter a valid email address';
+          }
+        }
+
+        return null;
+      },
     );
   }
+
+
 
   /// **🔹 Sign-Up Button Widget**
   Widget _buildSignUpButton(

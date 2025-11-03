@@ -48,9 +48,7 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
         SnackBar(content: Text('Error fetching dentist details: $e')),
       );
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
@@ -65,9 +63,9 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
       }).eq('dentist_id', widget.dentistId);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dentists details updated successfully!')),
+        const SnackBar(content: Text('Dentist details updated successfully!')),
       );
-      Navigator.pop(context, true); // Return "true" to refresh details
+      Navigator.pop(context, true); // refresh parent screen
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating dentist details: $e')),
@@ -80,36 +78,33 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile == null) return;
-
     final file = File(pickedFile.path);
     final fileName = 'dentist_${widget.dentistId}.jpg';
     final filePath = 'dentist-profile/$fileName';
 
     try {
-      // Delete existing file before uploading a new one
       await supabase.storage.from('dentist-profile').remove([filePath]);
-
-      // Upload image to Supabase Storage
       await supabase.storage.from('dentist-profile').upload(
             filePath,
             file,
             fileOptions: const FileOptions(upsert: true),
           );
 
-      // Get public URL after successful upload
       final publicUrl =
           supabase.storage.from('dentist-profile').getPublicUrl(filePath);
 
-      // Update profile URL in database
       await supabase.from('dentists').update({
         'profile_url': publicUrl,
       }).eq('dentist_id', widget.dentistId);
 
       setState(() {
-        // Add a timestamp to the URL to force refresh and bypass cache
         profileUrl =
             '$publicUrl?timestamp=${DateTime.now().millisecondsSinceEpoch}';
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture updated!')),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error uploading image: $e')),
@@ -124,7 +119,7 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text(
-            "Dentist Update",
+            "Edit Profile",
             style: TextStyle(color: Colors.white),
           ),
           centerTitle: true,
@@ -134,17 +129,17 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.all(16.0),
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
                 child: Form(
                   key: _formKey,
-                  child: ListView(
+                  child: Column(
                     children: [
-                      // Profile Picture
+                      // Profile Picture with tap to upload
                       GestureDetector(
                         onTap: _pickAndUploadImage,
                         child: CircleAvatar(
-                          radius: 150,
+                          radius: 80,
                           backgroundColor: Colors.grey[300],
                           backgroundImage: profileUrl != null &&
                                   profileUrl!.isNotEmpty
@@ -153,56 +148,95 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
                                   as ImageProvider,
                           child: profileUrl == null || profileUrl!.isEmpty
                               ? const Icon(Icons.camera_alt,
-                                  size: 30, color: Colors.grey)
+                                  size: 40, color: Colors.grey)
                               : null,
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Tap to change photo (1x1 profile)",
+                        style: TextStyle(color: Colors.black54, fontSize: 14),
+                      ),
                       const SizedBox(height: 30),
-                      const Align(
-                        alignment: Alignment.center,
-                        child: Text("1x1 Profile Pic"),
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
+
+                      // Editable TextFields
+                      _buildInputField(
                         controller: firstnameController,
-                        decoration:
-                            const InputDecoration(labelText: 'Firstname'),
-                        validator: (value) =>
-                            value!.isEmpty ? 'Required' : null,
+                        label: 'Firstname',
+                        icon: Icons.person,
+                        validatorMsg: 'Required',
                       ),
-                      const SizedBox(height: 10),
-                      TextFormField(
+                      _buildInputField(
                         controller: lastnameController,
-                        decoration:
-                            const InputDecoration(labelText: 'Lastname'),
-                        validator: (value) =>
-                            value!.isEmpty ? 'Required' : null,
+                        label: 'Lastname',
+                        icon: Icons.person_outline,
+                        validatorMsg: 'Required',
                       ),
-                      const SizedBox(height: 10),
-                      TextFormField(
+                      _buildInputField(
                         controller: phoneController,
-                        decoration: const InputDecoration(labelText: 'Phone'),
+                        label: 'Phone Number',
+                        icon: Icons.phone,
+                        keyboardType: TextInputType.phone,
                       ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _updateDentistDetails,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue, // Button color
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 30, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+
+                      const SizedBox(height: 30),
+
+                      // Save Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _updateDentistDetails,
+                          icon: const Icon(Icons.save, color: Colors.white),
+                          label: const Text(
+                            'Save Changes',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        child: const Text(
-                          'Save Changes',
-                          style: TextStyle(color: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 20),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  /// Styled input field for consistent look
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? validatorMsg,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        controller: controller,
+        validator: validatorMsg != null
+            ? (value) => value!.isEmpty ? validatorMsg : null
+            : null,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Colors.blueAccent),
+          filled: true,
+          fillColor: Colors.grey[200],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
-import 'package:dentease/login/login_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'login/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,17 +25,17 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.grey[300], // Light grey background
-          hintStyle: TextStyle(color: Colors.indigoAccent[900]), 
+          fillColor: Colors.grey[300], 
+          hintStyle: TextStyle(color: Colors.indigo[900]), 
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30), // Rounded corners
+            borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none, // No border
           ),
           contentPadding: EdgeInsets.symmetric(
               vertical: 15, horizontal: 20), // Adjust padding
         ),
       ),
-      home: LoginScreen(), // Start with SplashScreen
+      home: LoginScreen(), // Start with 
     );
   }
 }

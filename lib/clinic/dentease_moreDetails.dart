@@ -211,7 +211,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                   // license Image
                                   const Text(
-                                    'PRC Certificate:',
+                                    'PRC Credentials:',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -254,7 +254,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                     )
                                   else
                                     const Text(
-                                      "No PRC Certificate image available.",
+                                      "No PRC license image available.",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontStyle: FontStyle.italic,
@@ -269,7 +269,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                   // Permit Image
                                   const Text(
-                                    'DTI Permit Image:',
+                                    'DTI Permit:',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -327,7 +327,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
 
                                   // Office Image
                                   const Text(
-                                    'Workplace Image:',
+                                    'Workplace:',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,

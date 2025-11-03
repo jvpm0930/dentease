@@ -195,6 +195,18 @@ class _DentistPageState extends State<DentistPage> {
                         );
                       },
                     ),
+                    _buildCustomButton(
+                      title: "Clinic Analytics",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                DentClinicPage(clinicId: clinicId!),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

@@ -75,7 +75,7 @@ class _DentistFooterState extends State<DentistFooter> {
             _buildNavImage(
                 'assets/icons/chat.png', context, ClinicPatientChatList(clinicId: widget.clinicId)),
             _buildNavImage(
-                'assets/icons/customer-service.png', context, ClinicChatPageforAdmin(clinicId: widget.clinicId, adminId: '')),
+                'assets/icons/customer-service.png', context, ClinicChatPageforAdmin(clinicId: widget.clinicId, adminId: 'eee5f574-903b-4575-a9d9-2f69e58f1801')),
             _buildNavImage('assets/icons/profile.png', context,
                 DentistProfile(dentistId: widget.dentistId)),
           ],

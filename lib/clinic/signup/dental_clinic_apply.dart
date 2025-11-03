@@ -193,7 +193,7 @@ import 'package:flutter/material.dart';
                     onPressed: () => _pickImage("license"),
                     icon: const Icon(Icons.upload_file),
                     label: const Text(
-                      'PRC Certificate Image',
+                      'PRC Credentials',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -207,7 +207,7 @@ import 'package:flutter/material.dart';
                 if (licenseImage != null) const SizedBox(height: 8),
                 if (licenseImage != null)
                   const Text(
-                    'PRC Certificate image selected.',
+                    'PRC Credentials image selected.',
                     style: TextStyle(color: Colors.black),
                   ),
                 const SizedBox(height: 16),
@@ -217,7 +217,7 @@ import 'package:flutter/material.dart';
                     onPressed: () => _pickImage("permit"),
                     icon: const Icon(Icons.upload_file),
                     label: const Text(
-                      'DTI Permit Image',
+                      'DTI Permit',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -241,7 +241,7 @@ import 'package:flutter/material.dart';
                     onPressed: () => _pickImage("office"),
                     icon: const Icon(Icons.upload_file),
                     label: const Text(
-                      'Workplace Image',
+                      'Workplace',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

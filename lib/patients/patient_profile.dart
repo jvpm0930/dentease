@@ -28,14 +28,14 @@ class _PatientProfileState extends State<PatientProfile> {
     try {
       final response = await supabase
           .from('patients')
-          .select('firstname, lastname, phone, role, profile_url')
+          .select(
+              'firstname, lastname, phone, role, profile_url, gender, age, password')
           .eq('patient_id', widget.patientId)
           .single();
 
       setState(() {
         patientDetails = response;
 
-        // Add cache-busting timestamp to profile URL
         final url = response['profile_url'];
         if (url != null && url.isNotEmpty) {
           profileUrl =
@@ -58,7 +58,7 @@ class _PatientProfileState extends State<PatientProfile> {
 
   Widget _buildProfilePicture() {
     return CircleAvatar(
-      radius: 50,
+      radius: 80,
       backgroundColor: Colors.grey[300],
       backgroundImage: profileUrl != null && profileUrl!.isNotEmpty
           ? NetworkImage(profileUrl!)
@@ -66,20 +66,44 @@ class _PatientProfileState extends State<PatientProfile> {
     );
   }
 
-  Widget _buildTextField(String hint) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextField(
-        readOnly: true,
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.grey[300],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
+  Widget _buildInfoTile(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blueAccent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14, color: Colors.grey, height: 1.3)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : 'N/A',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -87,65 +111,81 @@ class _PatientProfileState extends State<PatientProfile> {
   @override
   Widget build(BuildContext context) {
     return BackgroundCont(
-        child: Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: const Text(
-          "My Profile",
-          style: TextStyle(color: Colors.white),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            "My Profile",
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent, // Transparent AppBar
-        elevation: 0, // Remove shadow
-        iconTheme: const IconThemeData(color: Colors.white), // White icons
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  _buildProfilePicture(),
-                  const SizedBox(height: 16),
-                  _buildTextField(patientDetails?['firstname'] ?? 'Firstname'),
-                  _buildTextField(patientDetails?['lastname'] ?? 'Lastname'),
-                  _buildTextField(patientDetails?['phone'] ?? 'Phone Number'),
-                  _buildTextField(patientDetails?['role'] ?? 'Role'),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView(
+                  children: [
+                    const SizedBox(height: 10),
+                    Center(child: _buildProfilePicture()),
+                    const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
+                    // Profile Information
+                    _buildInfoTile(Icons.person, "Firstname",
+                        patientDetails?['firstname'] ?? ''),
+                    _buildInfoTile(Icons.person_outline, "Lastname",
+                        patientDetails?['lastname'] ?? ''),
+                    _buildInfoTile(Icons.calculate, "Age",
+                        patientDetails?['age']?.toString() ?? ''),
+                    _buildInfoTile(Icons.wc_rounded, "Gender",
+                        patientDetails?['gender'] ?? ''),
+                    _buildInfoTile(Icons.phone, "Phone Number",
+                        patientDetails?['phone'] ?? ''),
+                    _buildInfoTile(
+                        Icons.badge, "Role", patientDetails?['role'] ?? ''),
+                    _buildInfoTile(Icons.lock, "Password",
+                        patientDetails?[''] ?? '******'),
 
-                  // "Edit Details" Button
-                  ElevatedButton(
-                    onPressed: () async {
-                      final updated = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              PatientProfUpdate(patientId: widget.patientId),
+                    const SizedBox(height: 30),
+
+                    // Edit Button
+                    ElevatedButton.icon(
+                        onPressed: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PatientProfUpdate(
+                                  patientId: widget.patientId),
+                            ),
+                          );
+
+                          if (updated == true) {
+                            _fetchPatientDetails();
+                          }
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        label: const Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
-                      );
-
-                      if (updated == true) {
-                        _fetchPatientDetails(); // Refresh after update
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue, // Button color
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Edit Changes',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
+                    const SizedBox(height: 50),
+                  ],
+                ),
               ),
-            ),
-    ));
+      ),
+    );
   }
 }

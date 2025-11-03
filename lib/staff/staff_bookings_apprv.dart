@@ -35,10 +35,21 @@ class _StaffBookingApprvPageState extends State<StaffBookingApprvPage> {
     final response = await supabase
         .from('bookings')
         .select('booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, patients(firstname, lastname, email, phone), services(service_name, service_price)')
-        .eq('status', 'approved')
+        .or('status.eq.approved, status.eq.completed')
         .eq('clinic_id', widget.clinicId); // Filters bookings by clinicId
 
     return response;
+  }
+
+  Future<void> _updateBookingStatus(String bookingId, String newStatus) async {
+    await supabase
+        .from('bookings')
+        .update({'status': newStatus}).eq('booking_id', bookingId);
+
+    // Refresh bookings list after update
+    setState(() {
+      _bookingsFuture = _fetchBookings();
+    });
   }
 
   @override
@@ -139,6 +150,7 @@ class _StaffBookingApprvPageState extends State<StaffBookingApprvPage> {
                     itemCount: bookings.length,
                     itemBuilder: (context, index) {
                       final booking = bookings[index];
+                      String currentStatus = booking['status'];
 
                       return Card(
                         margin: const EdgeInsets.symmetric(
@@ -159,9 +171,43 @@ class _StaffBookingApprvPageState extends State<StaffBookingApprvPage> {
                               if (booking['clinics'] != null)
                                 Text(
                                     "Clinic: ${booking['clinics']['clinic_name']}"),
-                              Text("Status: ${booking['status']}",
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
+                              Row(
+                                children: [
+                                  const Text("Status: "),
+                                  DropdownButton<String>(
+                                    value: currentStatus,
+                                    onChanged: (newStatus) {
+                                      if (newStatus != null) {
+                                        setState(() {
+                                          booking['status'] = newStatus;
+                                        });
+                                      }
+                                    },
+                                    items: [
+                                      "approved",
+                                      "completed",
+                                    ].map<DropdownMenuItem<String>>(
+                                        (String status) {
+                                      return DropdownMenuItem<String>(
+                                        value: status,
+                                        child: Text(status),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      _updateBookingStatus(
+                                          booking['booking_id'].toString(),
+                                          booking['status']);
+                                    },
+                                    child: const Text(
+                                      "Update",
+                                      style: TextStyle(color: Colors.blue),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                           trailing: GestureDetector(

@@ -1,5 +1,3 @@
-import 'package:dentease/clinic/models/adminChat_supportList.dart';
-import 'package:dentease/clinic/models/clinicChat_support.dart';
 import 'package:dentease/dentist/dentist_profile_update.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
@@ -36,8 +34,6 @@ class _DentistProfileState extends State<DentistProfile> {
 
       setState(() {
         dentistDetails = response;
-
-        // Add cache-busting timestamp to profile URL
         final url = response['profile_url'];
         if (url != null && url.isNotEmpty) {
           profileUrl =
@@ -51,41 +47,8 @@ class _DentistProfileState extends State<DentistProfile> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error fetching dentist details: $e')),
       );
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
-  }
-
-  Widget _buildProfilePicture() {
-    return CircleAvatar(
-      radius: 50,
-      backgroundColor: Colors.grey[300],
-      backgroundImage: profileUrl != null && profileUrl!.isNotEmpty
-          ? NetworkImage(profileUrl!)
-          : const AssetImage('assets/default_profile.png') as ImageProvider,
-      child: profileUrl == null || profileUrl!.isEmpty
-          ? const Icon(Icons.person, size: 50, color: Colors.grey)
-          : null,
-    );
-  }
-
-  Widget _buildTextField(String hint) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextField(
-        readOnly: true,
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.grey[300],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -105,50 +68,113 @@ class _DentistProfileState extends State<DentistProfile> {
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.all(16.0),
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Profile Picture
-                    _buildProfilePicture(),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                        dentistDetails?['firstname'] ?? 'Firstname'),
-                    _buildTextField(dentistDetails?['lastname'] ?? 'Lastname'),
-                    _buildTextField(dentistDetails?['phone'] ?? 'Phone'),
-                    _buildTextField(dentistDetails?['role'] ?? 'Role'),
-
-                    const SizedBox(height: 16),
-
-                    // "Edit Details" Button
-                    ElevatedButton(
-                      onPressed: () async {
-                        final updated = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                DentistProfUpdate(dentistId: widget.dentistId),
-                          ),
-                        );
-
-                        // If details were updated, refresh profile and update cache
-                        if (updated == true) {
-                          _fetchDentistDetails(); // Refresh after update
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue, // Button color
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 12),
+                    Center(
+                      child: CircleAvatar(
+                        radius: 80,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage:
+                            profileUrl != null && profileUrl!.isNotEmpty
+                                ? NetworkImage(profileUrl!)
+                                : const AssetImage('assets/default_profile.png')
+                                    as ImageProvider,
+                        child: profileUrl == null || profileUrl!.isEmpty
+                            ? const Icon(Icons.person,
+                                size: 60, color: Colors.grey)
+                            : null,
                       ),
-                      child: const Text(
-                        'Edit Details',
-                        style: TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Dentist Info Fields (read-only)
+                    _buildInfoField(
+                      label: "Firstname",
+                      value: dentistDetails?['firstname'] ?? '',
+                      icon: Icons.person,
+                    ),
+                    _buildInfoField(
+                      label: "Lastname",
+                      value: dentistDetails?['lastname'] ?? '',
+                      icon: Icons.person_outline,
+                    ),
+                    _buildInfoField(
+                      label: "Phone Number",
+                      value: dentistDetails?['phone'] ?? '',
+                      icon: Icons.phone,
+                    ),
+                    _buildInfoField(
+                      label: "Role",
+                      value: dentistDetails?['role'] ?? '',
+                      icon: Icons.badge,
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Edit Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DentistProfUpdate(
+                                  dentistId: widget.dentistId),
+                            ),
+                          );
+                          if (updated == true) {
+                            _fetchDentistDetails(); // refresh details
+                          }
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        label: const Text(
+                          'Edit Details',
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  /// Styled info display field (readonly)
+  Widget _buildInfoField({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextFormField(
+        readOnly: true,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Colors.blueAccent),
+          filled: true,
+          fillColor: Colors.grey[200],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        controller: TextEditingController(text: value),
       ),
     );
   }

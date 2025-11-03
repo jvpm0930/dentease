@@ -19,10 +19,13 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
 
   final TextEditingController firstnameController = TextEditingController();
   final TextEditingController lastnameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController ageController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  String? genderValue;
   String? profileUrl;
   bool isLoading = true;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -34,7 +37,8 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
     try {
       final response = await supabase
           .from('patients')
-          .select('firstname, lastname, phone, profile_url')
+          .select(
+              'firstname, lastname, phone, profile_url, age, gender, password')
           .eq('patient_id', widget.patientId)
           .single();
 
@@ -42,6 +46,9 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
         firstnameController.text = response['firstname'] ?? '';
         lastnameController.text = response['lastname'] ?? '';
         phoneController.text = response['phone'] ?? '';
+        ageController.text = response['age']?.toString() ?? '';
+        genderValue = response['gender'];
+        passwordController.text = response['password'] ?? '';
         profileUrl = response['profile_url'];
       });
     } catch (e) {
@@ -60,9 +67,12 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
 
     try {
       await supabase.from('patients').update({
-        'firstname': firstnameController.text,
-        'lastname': lastnameController.text,
-        'phone': phoneController.text,
+        'firstname': firstnameController.text.trim(),
+        'lastname': lastnameController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'age': int.tryParse(ageController.text.trim()) ?? 0,
+        'gender': genderValue,
+        'password': passwordController.text.trim(),
       }).eq('patient_id', widget.patientId);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,27 +98,21 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
     final filePath = 'patient-profile/$fileName';
 
     try {
-      // Delete existing file before uploading a new one
       await supabase.storage.from('patient-profile').remove([filePath]);
-
-      // Upload image to Supabase Storage
       await supabase.storage.from('patient-profile').upload(
             filePath,
             file,
             fileOptions: const FileOptions(upsert: true),
           );
 
-      // Get public URL after successful upload
       final publicUrl =
           supabase.storage.from('patient-profile').getPublicUrl(filePath);
 
-      // Update profile URL in database
       await supabase.from('patients').update({
         'profile_url': publicUrl,
       }).eq('patient_id', widget.patientId);
 
       setState(() {
-        // Add a timestamp to the URL to force refresh and bypass cache
         profileUrl =
             '$publicUrl?timestamp=${DateTime.now().millisecondsSinceEpoch}';
       });
@@ -122,79 +126,186 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
   @override
   Widget build(BuildContext context) {
     return BackgroundCont(
-        child: Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: const Text(
-          "Patient update",
-          style: TextStyle(color: Colors.white),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            "Update Profile",
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent, // Transparent AppBar
-        elevation: 0, // Remove shadow
-        iconTheme: const IconThemeData(color: Colors.white), // White icons
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    // Profile Picture
-                    GestureDetector(
-                      onTap: _pickAndUploadImage,
-                      child: CircleAvatar(
-                        radius: 150,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage:
-                            profileUrl != null && profileUrl!.isNotEmpty
-                                ? NetworkImage(profileUrl!)
-                                : const AssetImage('assets/profile.png')
-                                    as ImageProvider,
-                        child: profileUrl == null || profileUrl!.isEmpty
-                            ? const Icon(Icons.camera_alt,
-                                size: 30, color: Colors.grey)
-                            : null,
-                      ),
-                    ),
-                    const Align(
-                      alignment: Alignment.center,
-                      child: Text("1x1 Profile Pic"),
-                    ),
-                    const SizedBox(height: 30),
-                    TextFormField(
-                      controller: firstnameController,
-                      decoration: const InputDecoration(labelText: 'Firstname'),
-                      validator: (value) => value!.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: lastnameController,
-                      decoration: const InputDecoration(labelText: 'Lastname'),
-                      validator: (value) => value!.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _updatePatientDetails,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue, // Button color
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    children: [
+                      // Profile Picture
+                      GestureDetector(
+                        onTap: _pickAndUploadImage,
+                        child: CircleAvatar(
+                          radius: 80,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage:
+                              profileUrl != null && profileUrl!.isNotEmpty
+                                  ? NetworkImage(profileUrl!)
+                                  : const AssetImage('assets/profile.png')
+                                      as ImageProvider,
+                          child: profileUrl == null || profileUrl!.isEmpty
+                              ? const Icon(Icons.camera_alt,
+                                  size: 30, color: Colors.grey)
+                              : null,
                         ),
                       ),
-                      child: const Text(
-                        'Save Changes',
-                        style: TextStyle(color: Colors.white),
+                      const Align(
+                        alignment: Alignment.center,
+                        child: Text("Tap to update profile picture"),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 30),
+
+                      // Firstname
+                      TextFormField(
+                        controller: firstnameController,
+                        decoration: const InputDecoration(
+                            labelText: 'Firstname',
+                            prefixIcon: Icon(
+                              Icons.person,
+                              color: Colors.blueAccent,
+                            )),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Lastname
+                      TextFormField(
+                        controller: lastnameController,
+                        decoration: const InputDecoration(
+                            labelText: 'Lastname',
+                            prefixIcon: Icon(
+                              Icons.person_outline,
+                              color: Colors.blueAccent,
+                            )),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Phone Number
+                      TextFormField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                            labelText: 'Phone Number',
+                            prefixIcon: Icon(
+                              Icons.phone,
+                              color: Colors.blueAccent,
+                            )),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Age
+                      TextFormField(
+                        controller: ageController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Age',
+                            prefixIcon: Icon(
+                              Icons.calculate,
+                              color: Colors.blueAccent,
+                            )),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Gender Dropdown
+                      DropdownButtonFormField<String>(
+                        value: genderValue,
+                        decoration: const InputDecoration(
+                          labelText: 'Gender',
+                          prefixIcon: Icon(
+                            Icons.wc_rounded,
+                            color: Colors.blueAccent,
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(
+                              value: 'Female', child: Text('Female')),
+                          DropdownMenuItem(
+                              value: 'Not Specify', child: Text('Not Specify')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            genderValue = value;
+                          });
+                        },
+                        validator: (value) =>
+                            value == null ? 'Please select gender' : null,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Password
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(
+                            Icons.lock,
+                            color: Colors.blueAccent,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 15),
+
+                      // Save Button
+                      ElevatedButton.icon(
+                        onPressed: _updatePatientDetails,
+                        icon: const Icon(Icons.save,
+                            color: Colors.white), // <-- Save icon
+                        label: const Text(
+                          'Save Changes',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 30, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 50),
+                    ],
+                  ),
                 ),
               ),
-            ),
-    ));
+      ),
+    );
   }
 }
