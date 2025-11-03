@@ -1,3 +1,4 @@
+import 'package:dentease/clinic/deantease_analytics.dart';
 import 'package:dentease/clinic/dentease_patientList.dart';
 import 'package:dentease/dentist/dentist_clinic_front.dart'; // Import new page
 import 'package:dentease/dentist/dentist_clinic_sched.dart';
@@ -202,7 +203,7 @@ class _DentistPageState extends State<DentistPage> {
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
-                                DentClinicPage(clinicId: clinicId!),
+                                ClinicAnalytics(clinicId: clinicId!),
                           ),
                         );
                       },
