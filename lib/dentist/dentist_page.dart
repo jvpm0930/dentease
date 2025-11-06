@@ -1,6 +1,6 @@
 import 'package:dentease/clinic/deantease_analytics.dart';
 import 'package:dentease/clinic/dentease_patientList.dart';
-import 'package:dentease/dentist/dentist_clinic_front.dart'; // Import new page
+import 'package:dentease/dentist/dentist_clinic_front.dart';
 import 'package:dentease/dentist/dentist_clinic_sched.dart';
 import 'package:dentease/dentist/dentist_clinic_services.dart';
 import 'package:dentease/dentist/dentist_list.dart';
@@ -14,7 +14,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class DentistPage extends StatefulWidget {
   final String clinicId;
   final String dentistId;
-  const DentistPage({super.key, required this.clinicId, required this.dentistId});
+  const DentistPage(
+      {super.key, required this.clinicId, required this.dentistId});
 
   @override
   _DentistPageState createState() => _DentistPageState();
@@ -37,19 +38,17 @@ class _DentistPageState extends State<DentistPage> {
     final user = supabase.auth.currentUser;
 
     if (user == null || user.email == null) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       return;
     }
 
-    userEmail = user.email; // Assign userEmail
+    userEmail = user.email;
 
     try {
       final response = await supabase
           .from('dentists')
           .select('clinic_id, dentist_id')
-          .eq('email', userEmail!) // Ensure userEmail is not null
+          .eq('email', userEmail!)
           .maybeSingle();
 
       if (response != null) {
@@ -62,14 +61,14 @@ class _DentistPageState extends State<DentistPage> {
       print("Error fetching user details: $error");
     }
 
-    setState(() {
-      isLoading = false;
-    });
+    setState(() => isLoading = false);
   }
 
-  /// 🔹 **Reusable Custom Button**
-  Widget _buildCustomButton(
-      {required String title, required VoidCallback onTap}) {
+  /// 🔹 Reusable Button Widget
+  Widget _buildCustomButton({
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -77,7 +76,7 @@ class _DentistPageState extends State<DentistPage> {
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.grey[100], // Light background
+          color: Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -116,64 +115,55 @@ class _DentistPageState extends State<DentistPage> {
             if (isLoading)
               const Center(child: CircularProgressIndicator())
             else if (clinicId != null)
-              Positioned(
+              Positioned.fill(
                 top: 180,
-                left: 20,
-                right: 20,
-                child: Column(
-                  children: [
-                    _buildCustomButton(
-                      title: "Clinic Patients",
-                      onTap: () {
-                        Navigator.push(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      _buildCustomButton(
+                        title: "Clinic Patients",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ClinicPatientListPage(
-                                clinicId: clinicId!),
+                            builder: (context) =>
+                                ClinicPatientListPage(clinicId: clinicId!),
                           ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Dentists",
-                      onTap: () {
-                        Navigator.push(
+                        ),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Dentists",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
                                 DentistListPage(clinicId: clinicId!),
                           ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Staffs",
-                      onTap: () {
-                        Navigator.push(
+                        ),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Staffs",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
                                 DentStaffListPage(clinicId: clinicId!),
                           ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Services",
-                      onTap: () {
-                        Navigator.push(
+                        ),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Services",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
                                 DentistServListPage(clinicId: clinicId!),
                           ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Schedules",
-                      onTap: () {
-                        Navigator.push(
+                        ),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Schedules",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => DentistClinicSchedPage(
@@ -181,40 +171,38 @@ class _DentistPageState extends State<DentistPage> {
                               dentistId: widget.dentistId,
                             ),
                           ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Details",
-                      onTap: () {
-                        Navigator.push(
+                        ),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Details",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
                                 DentClinicPage(clinicId: clinicId!),
                           ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Analytics",
-                      onTap: () {
-                        Navigator.push(
+                        ),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Analytics",
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
                                 ClinicAnalytics(clinicId: clinicId!),
                           ),
-                        );
-                      },
-                    ),
-                  ],
+                        ),
+                      ),
+                      const SizedBox(height: 120), // add bottom padding
+                    ],
+                  ),
                 ),
               ),
-            if (dentistId != null) DentistFooter(clinicId: widget.clinicId, dentistId: dentistId!),
+            if (dentistId != null)
+              DentistFooter(clinicId: widget.clinicId, dentistId: dentistId!),
           ],
         ),
       ),
     );
   }
-}
+} 

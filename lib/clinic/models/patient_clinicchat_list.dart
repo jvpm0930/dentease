@@ -2,6 +2,7 @@ import 'package:dentease/clinic/models/patientchatpage.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 
 class PatientClinicChatList extends StatefulWidget {
   final String patientId;
@@ -15,51 +16,89 @@ class PatientClinicChatList extends StatefulWidget {
 class _PatientClinicChatListState extends State<PatientClinicChatList> {
   final supabase = Supabase.instance.client;
   List<Map<String, dynamic>> clinics = [];
+  Map<String, bool> hasNewMessages = {};
   bool isLoading = true;
+  Timer? refreshTimer;
 
   @override
   void initState() {
     super.initState();
     fetchClinics();
+    startAutoRefresh();
   }
 
-  /// Fetches clinics based on `clinic_id` from `bookings`, retrieving clinic details from `clinics` table
+  void startAutoRefresh() {
+    refreshTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      fetchClinics();
+    });
+  }
+
+  /// Fetches clinics based on `clinic_id` from `bookings` table,
+  /// retrieves clinic details, and checks for unread messages.
   Future<void> fetchClinics() async {
     try {
+      // Get all bookings for this patient
       final bookingResponse = await supabase
           .from('bookings')
           .select('clinic_id')
           .eq('patient_id', widget.patientId);
 
       final clinicIds =
-          bookingResponse.map((booking) => booking['clinic_id']).toList();
+          bookingResponse.map((b) => b['clinic_id'] as String).toList();
 
       if (clinicIds.isEmpty) {
         setState(() {
           clinics = [];
+          hasNewMessages = {};
           isLoading = false;
         });
         return;
       }
 
-      // Fetch clinic data based on `clinic_id`
+      // Get clinic details
       final clinicResponse = await supabase
           .from('clinics')
           .select('clinic_id, clinic_name, email')
-          .inFilter('clinic_id', clinicIds); // Corrected filter
+          .inFilter('clinic_id', clinicIds);
 
+      // Get all unread messages (clinic → patient)
+      final unreadMessages = await supabase
+          .from('messages')
+          .select('sender_id')
+          .eq('receiver_id', widget.patientId)
+          .or('is_read.eq.false,is_read.eq.FALSE,is_read.is.null');
+
+      final unreadClinicIds =
+          unreadMessages.map((m) => m['sender_id'] as String).toSet();
+
+      // Create a map for quick lookup
+      final Map<String, bool> newMessagesMap = {
+        for (var id in clinicIds) id: unreadClinicIds.contains(id)
+      };
+
+      // Update UI
       setState(() {
         clinics = List<Map<String, dynamic>>.from(clinicResponse);
+        hasNewMessages = newMessagesMap;
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error fetching clinics: $e')),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    stopAutoRefresh(); 
+    super.dispose();
+  }
+
+  void stopAutoRefresh() {
+    refreshTimer?.cancel();
+    refreshTimer = null;
   }
 
   @override
@@ -73,13 +112,12 @@ class _PatientClinicChatListState extends State<PatientClinicChatList> {
             style: TextStyle(color: Colors.white),
           ),
           centerTitle: true,
-          backgroundColor: Colors.transparent, // Transparent AppBar
-          elevation: 0, // Remove shadow
-          iconTheme: const IconThemeData(color: Colors.white), // White icons
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: isLoading
-            ? const Center(
-                child: CircularProgressIndicator()) // Show loading indicator
+            ? const Center(child: CircularProgressIndicator())
             : clinics.isEmpty
                 ? const Center(
                     child: Text(
@@ -98,7 +136,7 @@ class _PatientClinicChatListState extends State<PatientClinicChatList> {
                       final clinicEmail = clinic['email'] as String? ?? '';
 
                       return Card(
-                        elevation: 4, // Shadow effect
+                        elevation: 4,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),
@@ -115,21 +153,42 @@ class _PatientClinicChatListState extends State<PatientClinicChatList> {
                           ),
                           subtitle: Text(
                             clinicEmail,
-                            style: TextStyle(color: Colors.grey[700]),
+                            style: const TextStyle(color: Colors.black54),
                           ),
-                          trailing: const Icon(Icons.chat, color: Colors.blue),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              hasNewMessages[clinicId] == true
+                                  ? const Icon(Icons.mark_chat_unread,
+                                      color: Colors.red)
+                                  : const Icon(Icons.chat_bubble_outline,
+                                      color: Colors.blue),
+                              if (hasNewMessages[clinicId] == true)
+                                const Text(
+                                  'New message',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
                           onTap: () {
                             if (clinicId != null) {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => PatientChatpage(
+                                  builder: (_) => PatientChatPage(
                                     patientId: widget.patientId,
                                     clinicName: clinicName,
                                     clinicId: clinicId,
                                   ),
                                 ),
-                              );
+                              ).then((_) {
+                                // Refresh when returning from chat page
+                                fetchClinics();
+                              });
                             }
                           },
                         ),

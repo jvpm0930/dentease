@@ -2,6 +2,7 @@ import 'package:dentease/clinic/models/clinicchatpage.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 
 class ClinicPatientChatList extends StatefulWidget {
   final String clinicId;
@@ -17,28 +18,35 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
   List<Map<String, dynamic>> patients = [];
   Map<String, bool> hasNewMessages = {};
   bool isLoading = true;
+  Timer? refreshTimer;
 
   @override
   void initState() {
     super.initState();
     fetchPatients();
+    startAutoRefresh();
   }
 
-  Future<void> fetchPatients() async {  
+  void startAutoRefresh() {
+    refreshTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      fetchPatients();
+    });
+  }
+
+  Future<void> fetchPatients() async {
     try {
       final bookingResponse = await supabase
           .from('bookings')
           .select('patient_id')
           .eq('clinic_id', widget.clinicId);
 
-      final patientIds = bookingResponse
-          .map((booking) => booking['patient_id'] as String)
-          .toList();
+      final patientIds =
+          bookingResponse.map((b) => b['patient_id'] as String).toList();
 
       if (patientIds.isEmpty) {
         setState(() {
           patients = [];
-          hasNewMessages = {}; // Ensure this is reset
+          hasNewMessages = {};
           isLoading = false;
         });
         return;
@@ -49,34 +57,42 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
           .select('patient_id, firstname, email')
           .inFilter('patient_id', patientIds);
 
-      final Map<String, bool> newMessagesMap = {};
+      final unreadMessages = await supabase
+          .from('messages')
+          .select('sender_id')
+          .eq('receiver_id', widget.clinicId)
+          .or('is_read.eq.false,is_read.eq.FALSE,is_read.is.null');
 
-      for (var patientId in patientIds) {
-        final newMessageResponse = await supabase
-            .from('messages')
-            .select()
-            .eq('sender_id', patientId)
-            .eq('receiver_id', widget.clinicId)
-            .eq('read', false);
+      final unreadIds =
+          unreadMessages.map((m) => m['sender_id'] as String).toSet();
 
-        newMessagesMap[patientId] = newMessageResponse.isNotEmpty;
-      }
+      final Map<String, bool> newMessagesMap = {
+        for (var id in patientIds) id: unreadIds.contains(id)
+      };
 
       setState(() {
         patients = List<Map<String, dynamic>>.from(patientResponse);
-        hasNewMessages = newMessagesMap; 
+        hasNewMessages = newMessagesMap;
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error fetching patients: $e')),
       );
     }
   }
 
+  @override
+  void dispose() {
+    stopAutoRefresh();
+    super.dispose();
+  }
+
+  void stopAutoRefresh() {
+    refreshTimer?.cancel();
+    refreshTimer = null;
+  }
 
 
   @override
@@ -142,7 +158,11 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.chat_bubble, color: Colors.blue),
+                              hasNewMessages[patientId] == true
+                                  ? const Icon(Icons.mark_chat_unread,
+                                      color: Colors.red)
+                                  : const Icon(Icons.chat_bubble_outline,
+                                      color: Colors.blue),
                               if (hasNewMessages[patientId] == true)
                                 const Text(
                                   'New message',
