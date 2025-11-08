@@ -36,7 +36,7 @@ class _AdmClinicPatientsPageState extends State<AdmClinicPatientsPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching patients: $e')),
+        SnackBar(content: Text('Error fetching patients')),
       );
     } finally {
       setState(() {

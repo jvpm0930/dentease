@@ -3,31 +3,6 @@ import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-
-Future<void> showLocalNotification(String title, String body) async {
-  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-    'chat_channel',
-    'Chat Notifications',
-    channelDescription: 'Notification channel for new chat messages',
-    importance: Importance.high,
-    priority: Priority.high,
-    playSound: true,
-  );
-
-  const NotificationDetails platformDetails =
-      NotificationDetails(android: androidDetails);
-
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    title,
-    body,
-    platformDetails,
-  );
-}
 
 String _formatTimestamp(String timestamp) {
   final DateTime dateTime = DateTime.parse(timestamp).toLocal();
@@ -81,9 +56,14 @@ class _PatientChatPageState extends State<PatientChatPage> {
   }
 
   void startAutoRefresh() {
-    refreshTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       fetchMessages();
     });
+  }
+
+  void stopAutoRefresh() {
+    refreshTimer?.cancel();
+    refreshTimer = null;
   }
 
   /// Fetch all messages between this clinic and patient
@@ -106,7 +86,7 @@ class _PatientChatPageState extends State<PatientChatPage> {
         messages = List<Map<String, dynamic>>.from(filtered);
       });
     } catch (e) {
-      debugPrint('Error fetching messages: $e');
+      debugPrint('Error fetching messages');
     }
   }
 
@@ -114,9 +94,8 @@ class _PatientChatPageState extends State<PatientChatPage> {
   int lastUnreadCount = 0;
 
   void _listenForMessages() {
-    _messageSubscription = supabase
-        .from('messages')
-        .stream(primaryKey: ['id']).listen((payload) async {
+    _messageSubscription =
+        supabase.from('messages').stream(primaryKey: ['id']).listen((payload) {
       final relevantMessages = payload.where((msg) =>
           (msg['sender_id'] == widget.patientId &&
               msg['receiver_id'] == widget.clinicId) ||
@@ -126,33 +105,18 @@ class _PatientChatPageState extends State<PatientChatPage> {
       final List<Map<String, dynamic>> newMessages =
           List<Map<String, dynamic>>.from(relevantMessages);
 
-      // Update message list
       setState(() {
         messages = newMessages;
       });
 
-      // Count unread messages from the CLINIC to the PATIENT
+      // Update unread count tracker
       final unreadMessages = newMessages.where((msg) =>
           msg['sender_id'] == widget.clinicId &&
           msg['receiver_id'] == widget.patientId &&
           (msg['is_read'] == false || msg['is_read'] == null));
-
-      final currentUnreadCount = unreadMessages.length;
-
-      // Trigger notification only when new unread messages appear
-      if (currentUnreadCount > lastUnreadCount && unreadMessages.isNotEmpty) {
-        final latestUnread = unreadMessages.last;
-        await showLocalNotification(
-          'New message from ${widget.clinicName}',
-          latestUnread['message'] ?? '',
-        );
-      }
-
-      // Update unread count tracker
-      lastUnreadCount = currentUnreadCount;
+      lastUnreadCount = unreadMessages.length;
     });
   }
-
 
   /// Marks all unread clinic messages as read
   Future<void> markClinicMessagesAsRead() async {
@@ -183,20 +147,14 @@ class _PatientChatPageState extends State<PatientChatPage> {
       // Clear input and reset unread count
       messageController.clear();
       setState(() {
-        lastUnreadCount = 0; // reset local unread tracker
+        lastUnreadCount = 0;
       });
 
       // Mark all clinic messages as read after replying
       await markClinicMessagesAsRead();
     } catch (e) {
-      debugPrint(" Error sending message");
+      debugPrint("Error sending message");
     }
-  }
-
-
-  void stopAutoRefresh() {
-    refreshTimer?.cancel();
-    refreshTimer = null;
   }
 
   @override
@@ -316,7 +274,6 @@ class _PatientChatPageState extends State<PatientChatPage> {
                           ),
                         );
                       }),
-
                     ],
                   );
                 },

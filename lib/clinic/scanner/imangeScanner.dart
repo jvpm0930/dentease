@@ -24,14 +24,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   List<Map<String, dynamic>> services = [];
 
   final validDiseases = const [
-    "Chipped or Fractured",
-    "Gingivitis",
-    "Healthy Tooth",
-    "Malocclusion",
-    "Plaque and Tartar",
-    "Tooth Caries",
-    "Tooth Discoloration",
-    "Tooth Erosion",
+    "fractured",
+    "gingivitis",
+    "healthy",
+    "malocclusion",
+    "plaque and tartar",
+    "caries",
+    "discoloration",
+    "erosion",
   ];
 
   @override
@@ -50,7 +50,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         useGpuDelegate: false,
       );
     } catch (e) {
-      devtools.log("Error loading TFLite model: $e");
+      devtools.log("Error loading TFLite model");
     }
   }
 
@@ -143,7 +143,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         services = List<Map<String, dynamic>>.from(serviceResponse);
       });
     } catch (e) {
-      devtools.log("Error fetching disease description: $e");
+      devtools.log("Error fetching disease description:");
       if (!mounted) return;
       setState(() {
         diseaseDescription = "Error retrieving disease info.";

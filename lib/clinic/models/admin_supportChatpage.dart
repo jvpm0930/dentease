@@ -78,7 +78,7 @@ class _AdminSupportChatPageState extends State<AdminSupportChatPage> {
       messageController.clear();
       fetchMessages();
     } catch (e) {
-      print("Error sending message: $e");
+      print("Error sending message");
     }
   }
 

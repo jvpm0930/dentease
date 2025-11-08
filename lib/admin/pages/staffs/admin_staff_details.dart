@@ -36,7 +36,7 @@ class _AdmStaffDetailsPageState extends State<AdmStaffDetailsPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching dentist details: $e')),
+        SnackBar(content: Text('Error fetching dentist details')),
       );
       setState(() {
         isLoading = false;

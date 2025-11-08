@@ -37,7 +37,7 @@ class _AdminPagev2State extends State<AdminPagev2> {
         isLoading = false;
       });
     } catch (e) {
-      _showSnackbar('Error fetching clinics: $e');
+      _showSnackbar('Error fetching clinics');
       setState(() {
         isLoading = false;
       });

@@ -60,7 +60,7 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
       }
     } catch (e) {
       setState(() {
-        actualAddress = 'Error: $e';
+        actualAddress = 'Error';
       });
     }
   }

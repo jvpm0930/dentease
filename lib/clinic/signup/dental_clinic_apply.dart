@@ -127,7 +127,7 @@ import 'package:flutter/material.dart';
         longitude = null;
       });
     } catch (e) {
-      _showSnackbar('Error submitting application: $e');
+      _showSnackbar('Error submitting application');
     }
 
     }

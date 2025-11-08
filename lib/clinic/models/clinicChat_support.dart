@@ -76,7 +76,7 @@ class _ClinicChatPageforAdminState extends State<ClinicChatPageforAdmin> {
       messageController.clear();
       fetchMessages();
     } catch (e) {
-      print("Error sending message: $e");
+      print("Error sending message");
     }
   }
 

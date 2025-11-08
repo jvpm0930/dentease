@@ -78,7 +78,7 @@ class _DentAddPatientState extends State<DentAddPatient> {
         MaterialPageRoute(builder: (_) => LoginScreen()),
       );
     } catch (e) {
-      _showSnackbar('Error: $e');
+      _showSnackbar('Error');
     }
   }
 

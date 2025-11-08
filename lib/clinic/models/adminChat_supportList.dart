@@ -42,7 +42,7 @@ class _AdminSupportChatforClinicState extends State<AdminSupportChatforClinic> {
       if (!mounted) return;
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching clinics: $e')),
+        SnackBar(content: Text('Error fetching clinics')),
       );
     }
   }

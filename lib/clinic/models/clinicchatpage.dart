@@ -3,31 +3,6 @@ import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-
-Future<void> showLocalNotification(String title, String body) async {
-  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-    'chat_channel',
-    'Chat Notifications',
-    channelDescription: 'Notification channel for new chat messages',
-    importance: Importance.high,
-    priority: Priority.high,
-    playSound: true,
-  );
-
-  const NotificationDetails platformDetails =
-      NotificationDetails(android: androidDetails);
-
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    title,
-    body,
-    platformDetails,
-  );
-}
 
 String _formatTimestamp(String timestamp) {
   final DateTime dateTime = DateTime.parse(timestamp).toLocal();
@@ -81,7 +56,7 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
   }
 
   void startAutoRefresh() {
-    refreshTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       fetchMessages();
     });
   }
@@ -105,11 +80,10 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
         messages = List<Map<String, dynamic>>.from(filtered);
       });
     } catch (e) {
-      debugPrint('Error fetching messages: $e');
+      debugPrint('Error fetching messages');
     }
   }
 
-  /// Real-time listener for messages in this chat
   int lastUnreadCount = 0;
 
   void _listenForMessages() {
@@ -125,35 +99,20 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
       final List<Map<String, dynamic>> newMessages =
           List<Map<String, dynamic>>.from(relevantMessages);
 
-      // Update messages in state
       setState(() {
         messages = newMessages;
       });
 
-      // Count unread messages from patient
+      // Update the unread count tracker
       final unreadMessages = newMessages.where((msg) =>
           msg['sender_id'] == widget.patientId &&
           msg['receiver_id'] == widget.clinicId &&
           (msg['is_read'] == false || msg['is_read'] == null));
 
-      final currentUnreadCount = unreadMessages.length;
-
-      // Only trigger notification if new unread messages appear
-      if (currentUnreadCount > lastUnreadCount && unreadMessages.isNotEmpty) {
-        final latestUnread = unreadMessages.last;
-        await showLocalNotification(
-          'New message from ${widget.patientName}',
-          latestUnread['message'],
-        );
-      }
-
-      // Update the tracker
-      lastUnreadCount = currentUnreadCount;
+      lastUnreadCount = unreadMessages.length;
     });
   }
 
-
-  /// Mark all patient messages as read when opening or replying
   Future<void> markPatientMessagesAsRead() async {
     try {
       await supabase
@@ -163,11 +122,10 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
           .eq('receiver_id', widget.clinicId)
           .eq('is_read', false);
     } catch (e) {
-      debugPrint('Error marking patient messages as read: $e');
+      debugPrint('Error marking patient messages as read');
     }
   }
 
-  /// Send message (clinic → patient)
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
     try {
@@ -181,13 +139,12 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
 
       messageController.clear();
       setState(() {
-        lastUnreadCount = 0; // reset local unread tracker
+        lastUnreadCount = 0;
       });
 
-      // Mark all patient messages as read after sending a reply
       await markPatientMessagesAsRead();
     } catch (e) {
-      debugPrint("Error sending message: $e");
+      debugPrint("Error sending message");
     }
   }
 
@@ -313,7 +270,6 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
                           ),
                         );
                       }),
-
                     ],
                   );
                 },

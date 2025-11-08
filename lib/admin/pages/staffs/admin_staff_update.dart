@@ -45,7 +45,7 @@ class _AdmEditStaffPageState extends State<AdmEditStaffPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching staff details: $e')),
+        SnackBar(content: Text('Error fetching staff details')),
       );
     } finally {
       setState(() {
@@ -73,7 +73,7 @@ class _AdmEditStaffPageState extends State<AdmEditStaffPage> {
       Navigator.pop(context, true); // Return "true" to refresh details
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating staff details: $e')),
+        SnackBar(content: Text('Error updating staff details')),
       );
     }
   }

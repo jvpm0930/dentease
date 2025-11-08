@@ -20,7 +20,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
 
   final supabase = Supabase.instance.client;
 
-  /// **🔹 Check if Clinics Name Already Exist**
+  /// ** Check if Clinics Name Already Exist**
   Future<bool> _checkIfNameExists(String clinicname) async {
     final response = await supabase
         .from('clinics')
@@ -31,20 +31,20 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
     return response != null; // If response is not null, name exists
   }
 
-  /// **🔹 Sign-Up Function with Duplicate Checks**
+  /// ** Sign-Up Function with Duplicate Checks**
   Future<void> signUp() async {
     try {
       final clinicname = clinicnameController.text.trim();
       final email = emailController.text.trim();
       final phone = phoneController.text.trim();
 
-      // 🔹 **Check for Empty Fields**
+      // **Check for Empty Fields**
       if (clinicname.isEmpty || email.isEmpty || phone.isEmpty) {
         _showSnackbar('Please fill in all fields.');
         return;
       }
 
-      // 🔹 **Check if Name Exists**
+      // **Check if Name Exists**
       if (await _checkIfNameExists(clinicname)) {
         _showSnackbar('Name already taken. Please use a different name.');
         return;
@@ -87,7 +87,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
     }
   }
 
-  /// **🔹 Snackbar Message Helper**
+  /// ** Snackbar Message Helper**
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -177,7 +177,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
 
 
 
-  /// **🔹 Sign-Up Button Widget**
+  /// ** Sign-Up Button Widget**
   Widget _buildSignUpButton(
     IconData icon
   ) {
@@ -202,7 +202,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
         ));
   }
 
-  /// **🔹 Login Redirect Button**
+  /// ** Login Redirect Button**
   Widget _buildLoginTextButton() {
     return TextButton(
       onPressed: () => Navigator.push(

@@ -47,7 +47,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching clinic details: $e')),
+        SnackBar(content: Text('Error fetching clinic details')),
       );
       setState(() {
         isLoading = false;
@@ -66,7 +66,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating status: $e')),
+        SnackBar(content: Text('Error updating status')),
       );
     }
   }
@@ -90,7 +90,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending note: $e')),
+        SnackBar(content: Text('Error sending note')),
       );
     }
   }

@@ -174,7 +174,7 @@ class _DentalSignupState extends State<DentalSignup> {
     );
   }
 
-  /// **🔹 Reusable TextField Widget**
+  /// ** Reusable TextField Widget**
   Widget _buildTextField(
     TextEditingController controller,
     String hint,
@@ -211,7 +211,7 @@ class _DentalSignupState extends State<DentalSignup> {
     );
   }
 
-  /// **🔹 Sign-Up Button Widget**
+  /// ** Sign-Up Button Widget**
   Widget _buildSignUpButton() {
     return ElevatedButton(
       onPressed: signUp,

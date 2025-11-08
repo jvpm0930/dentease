@@ -45,7 +45,7 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching dentist details: $e')),
+        SnackBar(content: Text('Error fetching dentist details')),
       );
     } finally {
       setState(() {
@@ -73,7 +73,7 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
       Navigator.pop(context, true); // Return "true" to refresh details
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating dentist details: $e')),
+        SnackBar(content: Text('Error updating dentist details')),
       );
     }
   }

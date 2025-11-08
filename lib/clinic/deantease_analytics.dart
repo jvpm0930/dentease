@@ -157,7 +157,7 @@ class _ClinicAnalyticsState extends State<ClinicAnalytics> {
 
       setState(() => _isLoading = false);
     } catch (e) {
-      debugPrint('Error loading analytics: $e');
+      debugPrint('Error loading analytics');
       setState(() {
         _isLoading = false;
         topService = "Error loading data";

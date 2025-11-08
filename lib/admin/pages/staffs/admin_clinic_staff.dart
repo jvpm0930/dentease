@@ -36,7 +36,7 @@ class _AdmClinicStaffsPageState extends State<AdmClinicStaffsPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching staffs: $e')),
+        SnackBar(content: Text('Error fetching staffs')),
       );
     } finally {
       setState(() {

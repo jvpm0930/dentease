@@ -78,7 +78,7 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
     } catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching patients: $e')),
+        SnackBar(content: Text('Error fetching patients')),
       );
     }
   }

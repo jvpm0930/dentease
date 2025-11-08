@@ -24,7 +24,8 @@ Future<void> showLocalNotification(String title, String body) async {
   const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
     'chat_channel',
     'Chat Notifications',
-    channelDescription: 'Notifications for new chat messages',
+    channelDescription:
+        'Notifications for new chat messages or booking updates',
     importance: Importance.high,
     priority: Priority.high,
     playSound: true,
@@ -34,7 +35,7 @@ Future<void> showLocalNotification(String title, String body) async {
       NotificationDetails(android: androidDetails);
 
   await flutterLocalNotificationsPlugin.show(
-    DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique id
+    DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique ID
     title,
     body,
     platformDetails,
@@ -53,14 +54,18 @@ class PatientFooter extends StatefulWidget {
 class _PatientFooterState extends State<PatientFooter> {
   final supabase = Supabase.instance.client;
   bool hasUnreadMessages = false;
+  bool hasApprovedBookings = false;
   Timer? refreshTimer;
-  String? lastNotifiedMessageId;
+
+  final Set<String> notifiedMessageIds = {};
+  final Set<String> notifiedApprovedBookingIds = {};
 
   @override
   void initState() {
     super.initState();
     initNotifications();
     fetchUnreadMessages();
+    fetchApprovedBookings();
     startAutoRefresh();
   }
 
@@ -71,8 +76,9 @@ class _PatientFooterState extends State<PatientFooter> {
   }
 
   void startAutoRefresh() {
-    refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      fetchUnreadMessages();
+    refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      await fetchUnreadMessages();
+      await fetchApprovedBookings();
     });
   }
 
@@ -81,45 +87,83 @@ class _PatientFooterState extends State<PatientFooter> {
     refreshTimer = null;
   }
 
+  /// FETCH UNREAD MESSAGES
   Future<void> fetchUnreadMessages() async {
     try {
-      // Get all unread messages (clinic → patient)
       final response = await supabase
           .from('messages')
           .select('message_id, message, sender_id')
           .eq('receiver_id', widget.patientId)
           .or('is_read.eq.false,is_read.eq.FALSE,is_read.is.null')
-          .order('timestamp');
+          .order('timestamp', ascending: true);
 
-      if (response.isNotEmpty) {
-        setState(() => hasUnreadMessages = true);
+      if (response.isEmpty) {
+        if (mounted) setState(() => hasUnreadMessages = false);
+        return;
+      }
 
-        // Get the latest unread message
-        final latestUnread = response.last;
+      if (mounted) setState(() => hasUnreadMessages = true);
 
-        // Only trigger a notification for new messages
-        if (latestUnread['message_id'] != lastNotifiedMessageId) {
-          lastNotifiedMessageId = latestUnread['message_id'].toString();
+      for (var msg in response) {
+        final messageId = msg['message_id'].toString();
+        if (!notifiedMessageIds.contains(messageId)) {
+          notifiedMessageIds.add(messageId);
 
-          // Fetch clinic name (optional)
           final clinicData = await supabase
               .from('clinics')
               .select('clinic_name')
-              .eq('clinic_id', latestUnread['sender_id'])
+              .eq('clinic_id', msg['sender_id'])
               .maybeSingle();
 
           final clinicName = clinicData?['clinic_name'] ?? 'Clinic';
 
           await showLocalNotification(
             'New message from $clinicName',
-            latestUnread['message'] ?? '',
+            msg['message'] ?? 'Sent you a message',
           );
         }
-      } else {
-        setState(() => hasUnreadMessages = false);
       }
     } catch (e) {
-      debugPrint('Error fetching unread messages: $e');
+      debugPrint('Error fetching unread messages');
+    }
+  }
+
+  ///  FETCH APPROVED BOOKINGS
+  Future<void> fetchApprovedBookings() async {
+    try {
+      final response = await supabase
+          .from('bookings')
+          .select('booking_id, clinic_id, status')
+          .eq('patient_id', widget.patientId)
+          .eq('status', 'approved');
+
+      if (response.isNotEmpty) {
+        if (mounted) setState(() => hasApprovedBookings = true);
+      } else {
+        if (mounted) setState(() => hasApprovedBookings = false);
+      }
+
+      for (var booking in response) {
+        final bookingId = booking['booking_id'].toString();
+        if (!notifiedApprovedBookingIds.contains(bookingId)) {
+          notifiedApprovedBookingIds.add(bookingId);
+
+          final clinicData = await supabase
+              .from('clinics')
+              .select('clinic_name')
+              .eq('clinic_id', booking['clinic_id'])
+              .maybeSingle();
+
+          final clinicName = clinicData?['clinic_name'] ?? 'Your Clinic';
+
+          await showLocalNotification(
+            'Booking Approved!',
+            'Your booking has been approved by $clinicName.',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching approved bookings');
     }
   }
 
@@ -150,12 +194,49 @@ class _PatientFooterState extends State<PatientFooter> {
               children: [
                 _buildNavImage(
                     'assets/icons/home.png', context, const PatientPage()),
-                _buildNavImage('assets/icons/calendar.png', context,
-                    PatientBookingPend(patientId: widget.patientId)),
+
+                // Booking icon with red dot if approved
+                IconButton(
+                  iconSize: 35,
+                  icon: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/icons/calendar.png',
+                        width: 32,
+                        height: 32,
+                        color: Colors.white,
+                      ),
+                      if (hasApprovedBookings)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 13,
+                            height: 13,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            PatientBookingPend(patientId: widget.patientId),
+                      ),
+                    );
+                  },
+                ),
+
                 _buildNavImage('assets/icons/scan.png', context,
                     const ImageClassifierScreen()),
 
-                // Custom Chat Icon with unread indicator
+                // Chat icon with unread indicator
                 IconButton(
                   iconSize: 35,
                   icon: Stack(
