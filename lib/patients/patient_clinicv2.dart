@@ -67,9 +67,13 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Clinic Info'),
+          title: const Text('Clinic Info', style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           backgroundColor: Colors.transparent,
-          foregroundColor: Colors.black,
+          foregroundColor: Colors.white,
           elevation: 0.5,
         ),
         body: isLoading
@@ -93,11 +97,15 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                   SizedBox(
                                     width: double.infinity,
                                     height: 300,
-                                    child: clinic!['office_url'] != null &&
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        // Background image or placeholder
+                                        if (clinic!['office_url'] != null &&
                                             clinic!['office_url']
                                                 .toString()
-                                                .isNotEmpty
-                                        ? Image.network(
+                                                .isNotEmpty)
+                                          Image.network(
                                             clinic!['office_url'],
                                             fit: BoxFit.cover,
                                             errorBuilder:
@@ -110,7 +118,8 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                               );
                                             },
                                           )
-                                        : Container(
+                                        else
+                                          Container(
                                             color: Colors.grey[300],
                                             child: const Center(
                                               child: Icon(Icons.image,
@@ -118,6 +127,68 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                                   color: Colors.white),
                                             ),
                                           ),
+
+                                        // Gradient overlay (for readable text)
+                                        Positioned.fill(
+                                          child: DecoratedBox(
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Colors.transparent,
+                                                  Colors.black26,
+                                                  Colors.black54,
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Bottom-left overlay: clinic name and address
+                                        Positioned(
+                                          left: 16,
+                                          right: 16,
+                                          bottom: 16,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                clinic!['clinic_name'] ??
+                                                    'Unknown Clinic',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Icon(Icons.location_on,
+                                                      color: Colors.red,
+                                                      size: 18),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      clinic!['address'] ??
+                                                          'No address',
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
 
                                   // Clinic details
@@ -127,37 +198,11 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          clinic!['clinic_name'] ??
-                                              'Unknown Clinic',
-                                          style: const TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.location_on,
-                                                color: Colors.redAccent,
-                                                size: 18),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                clinic!['address'] ??
-                                                    'No address',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const Divider(thickness: 1.5),
-                                        const SizedBox(height: 10),
                                         Row(
                                           children: [
                                             const Icon(Icons.info,
-                                                color: Colors.indigo, size: 18),
-                                            const SizedBox(width: 4),
+                                                color: Colors.indigo, size: 20),
+                                            const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
                                                 (clinic?['info'] ?? '')
@@ -165,6 +210,9 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                                         .isNotEmpty
                                                     ? clinic!['info']
                                                     : 'No information available',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                    ) ,
                                               ),
                                             ),
                                           ],
@@ -186,7 +234,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                     Tab(text: 'Reviews'),
                                   ],
                                   labelColor: Colors.black,
-                                  indicatorColor: Colors.blueAccent,
+                                  indicatorColor: const Color(0xFF103D7E),
                                 ),
                               ),
                             ),
@@ -217,8 +265,10 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                     child: ListTile(
                                       leading: const Icon(
                                           Icons.medical_services,
-                                          color: Colors.blueAccent),
-                                      title: Text(service['service_name']),
+                                          color: const Color(0xFF103D7E)),
+                                      title: Text(service['service_name'], style: TextStyle(
+                                        fontWeight: FontWeight.bold
+                                      ),),
                                       subtitle: Text(
                                           "Price: ${service['service_price']}"),
                                       onTap: () {
@@ -246,7 +296,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
 
                               // REVIEWS TAB
                               ListView(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(25),
                                 children: [
                                   ElevatedButton.icon(
                                     onPressed: () {
@@ -259,8 +309,11 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                         ),
                                       ).then((_) => _fetchClinicDetails());
                                     },
-                                    icon: const Icon(Icons.feedback),
-                                    label: const Text("Add Review"),
+                                    icon: const Icon(Icons.feedback, color: const Color(0xFF103D7E)),
+                                    label: const Text("Add Review", style: TextStyle(
+                                      color: Color(0xFF103D7E),
+                                      fontWeight: FontWeight.bold,
+                                    ),),
                                   ),
                                   const SizedBox(height: 16),
                                   if (reviews.isEmpty)

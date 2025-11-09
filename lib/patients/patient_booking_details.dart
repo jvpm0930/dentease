@@ -69,7 +69,10 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
         appBar: AppBar(
           title: const Text(
             "Booking Details",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -79,122 +82,156 @@ class _PatientBookingDetailsPageState extends State<PatientBookingDetailsPage> {
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow(
-                  "Service name:",
-                  booking['services']['service_name'],
-                  labelStyle: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                _buildDetailRow("Service Price:",
-                    booking['services']['service_price']?.toString() ?? "N/A"),
-                _buildDetailRow("Clinic name:", "${booking['clinics']['clinic_name']}"),
-                _buildDetailRow(
-                    "Patient name:", "${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
-                _buildDetailRow(
-                    "Patient email:", "${booking['patients']['email']}"),
-                _buildDetailRow(
-                    "Patient phone number:", "${booking['patients']['phone']}"),
-                _buildDetailRow(
-                    "Service date booked:", formatDateTime(booking['date'])),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : bill != null
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Bill Details:",
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildDetailRow("Service name:",
-                                  booking['services']['service_name']),
-                              _buildDetailRow("Service Price:",
-                                  "${bill!['service_price']}"),
-                              _buildDetailRow(
-                                  "Medicine fee:", "${bill!['medicine_fee']}"),
-                              _buildDetailRow(
-                                  "Additional fee:", "${bill!['doctor_fee']}"),
-                              _buildDetailRow("Payment Method:",
-                                  "${bill!['payment_mode']}"),
-                              _buildDetailRow(
-                                  "Total Amount:", "${bill!['total_amount']}"),
-                              _buildDetailRow(
-                                  "Received:", "${bill!['recieved_money']}"),
-                              _buildDetailRow("Change:",
-                                  "${bill?['bill_change'] ?? 'None'}"),
-                            ],
-                          )
-                        : const Text(
-                            "No bill found for this booking.",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                const Text(
-                  'Receipt Image:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+            // Card wrapper for all content
+            child: ContentCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow(
+                    "Service name:",
+                    booking['services']['service_name'],
+                    labelStyle: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(height: 8),
-                if (booking['before_url'] != null &&
-                    (booking['before_url'] as String).isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FullScreenImage(
-                                imageUrl: booking['before_url'],
-                              ),
+                  _buildDetailRow(
+                      "Service Price:",
+                      booking['services']['service_price']?.toString() ??
+                          "N/A"),
+                  _buildDetailRow(
+                      "Clinic name:", "${booking['clinics']['clinic_name']}"),
+                  _buildDetailRow("Patient name:",
+                      "${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
+                  _buildDetailRow(
+                      "Patient email:", "${booking['patients']['email']}"),
+                  _buildDetailRow("Patient phone number:",
+                      "${booking['patients']['phone']}"),
+                  _buildDetailRow(
+                      "Service date booked:", formatDateTime(booking['date'])),
+                  const SizedBox(height: 20),
+                  const Divider(thickness: 1.5, color: Colors.blueGrey),
+                  const SizedBox(height: 20),
+
+                  // Bill details in the same card
+                  loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : bill != null
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Bill Details:",
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildDetailRow("Service name:",
+                                    booking['services']['service_name']),
+                                _buildDetailRow("Service Price:",
+                                    "${bill!['service_price']}"),
+                                _buildDetailRow("Medicine fee:",
+                                    "${bill!['medicine_fee']}"),
+                                _buildDetailRow("Additional fee:",
+                                    "${bill!['doctor_fee']}"),
+                                _buildDetailRow("Payment Method:",
+                                    "${bill!['payment_mode']}"),
+                                _buildDetailRow("Total Amount:",
+                                    "${bill!['total_amount']}"),
+                                _buildDetailRow(
+                                    "Received:", "${bill!['recieved_money']}"),
+                                _buildDetailRow("Change:",
+                                    "${bill?['bill_change'] ?? 'None'}"),
+                              ],
+                            )
+                          : const Text(
+                              "No bill found for this booking.",
+                              style: TextStyle(color: Colors.black54),
                             ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            booking['before_url'],
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
+
+                  const SizedBox(height: 20),
+                  const Divider(thickness: 1.5, color: Colors.blueGrey),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Receipt Image:',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (booking['before_url'] != null &&
+                      (booking['before_url'] as String).isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FullScreenImage(
+                                  imageUrl: booking['before_url'],
+                                ),
+                              ),
+                            );
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              booking['before_url'],
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
+                      ],
+                    )
+                  else
+                    const Text(
+                      "No receipt image is available.",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
                       ),
-                    ],
-                  )
-                else
-                  const Text(
-                    "No receipt image is available.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey,
                     ),
-                  ), 
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// Reusable content card with rounded corners and shadow
+class ContentCard extends StatelessWidget {
+  final Widget child;
+  const ContentCard({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95), // nice on a dark/gradient bg
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000), // subtle shadow
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }

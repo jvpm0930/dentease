@@ -32,13 +32,28 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
     final response = await supabase
         .from('bookings')
         .select(
-            'booking_id, patient_id, service_id, clinic_id, date, status, clinics(clinic_name), services(service_name)')
+          'booking_id, patient_id, service_id, clinic_id, date, status, '
+          'clinics(clinic_name), services(service_name)',
+        )
         .eq('status', 'pending')
         .eq('patient_id', widget.patientId);
     return response;
   }
 
-  /// 🗑️ Cancel (Delete) Booking
+  // Fade-only transition
+  Route<T> _fadeRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final fade =
+            CurvedAnimation(parent: animation, curve: Curves.easeInOut);
+        return FadeTransition(opacity: fade, child: child);
+      },
+    );
+  }
+
   Future<void> _cancelBooking(String bookingId) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -64,8 +79,6 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Booking cancelled successfully.')),
         );
-
-        // Refresh the booking list
         setState(() {
           _bookingsFuture = _fetchBookings();
         });
@@ -84,8 +97,11 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text(
-            "Pending Booking Request",
-            style: TextStyle(color: Colors.white),
+            "Pending Appointments",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -101,51 +117,38 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
-                    child: ElevatedButton(
+                    child: _segButton(
+                      label: "Approved",
+                      isActive: false,
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => PatientBookingApprv(
-                                patientId: widget.patientId),
-                          ),
+                          _fadeRoute(
+                              PatientBookingApprv(patientId: widget.patientId)),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("Approved"),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
+                    child: _segButton(
+                      label: "Pending",
+                      isActive: true, // current page
                       onPressed: null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[300],
-                        foregroundColor: Colors.grey[600],
-                      ),
-                      child: const Text("Pending"),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
+                    child: _segButton(
+                      label: "Rejected",
+                      isActive: false,
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                PatientBookingRej(patientId: widget.patientId),
-                          ),
+                          _fadeRoute(
+                              PatientBookingRej(patientId: widget.patientId)),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("Rejected"),
                     ),
                   ),
                 ],
@@ -162,8 +165,11 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
                   }
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(
-                        child: Text("No pending bookings",
-                            style: TextStyle(color: Colors.white)));
+                      child: Text(
+                        "No pending bookings",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
                   }
 
                   final bookings = snapshot.data!;
@@ -186,6 +192,7 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
                               Text("Date: ${formatDateTime(booking['date'])}"),
                               Text(
                                   "Clinic: ${booking['clinics']['clinic_name']}"),
+                              const SizedBox(height: 2),
                               Text(
                                 "Status: ${booking['status']}",
                                 style: const TextStyle(
@@ -203,7 +210,6 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
                           ),
                         ),
                       );
-
                     },
                   );
                 },
@@ -214,4 +220,27 @@ class _PatientBookingPendState extends State<PatientBookingPend> {
       ),
     );
   }
+}
+Widget _segButton({
+  required String label,
+  required bool isActive,
+  required VoidCallback? onPressed,
+}) {
+  const activeBg = Color(0xFF103D7E);
+  const activeFg = Colors.white;
+  final inactiveBg = const Color.fromARGB(0, 255, 255, 255)!;
+  final inactiveFg = const Color.fromARGB(74, 0, 0, 0)!;
+
+  return ElevatedButton(
+    onPressed: isActive ? null : onPressed,
+    style: ElevatedButton.styleFrom(
+      // When active (current page), we disable the button but style it as active
+      disabledBackgroundColor: isActive ? activeBg : null,
+      disabledForegroundColor: isActive ? activeFg : null,
+      // When inactive (other pages), make it look like a disabled/grey button but clickable
+      backgroundColor: isActive ? null : inactiveBg,
+      foregroundColor: isActive ? null : inactiveFg,
+    ),
+    child: Text(label),
+  );
 }

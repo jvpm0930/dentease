@@ -1,8 +1,8 @@
-caries
-discoloration
-erosion
-fractured
-gingivitis
-healthy
-malocclusion
-plaque and tartar
+Chipped or Fractured
+Gingivitis
+Healthy Tooth
+Malocclusion
+Plaque and Tartar
+Tooth Caries
+Tooth Discoloration
+Tooth Erosion

@@ -24,14 +24,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   List<Map<String, dynamic>> services = [];
 
   final validDiseases = const [
-    "fractured",
-    "gingivitis",
-    "healthy",
-    "malocclusion",
-    "plaque and tartar",
-    "caries",
-    "discoloration",
-    "erosion",
+    "Chipped or Fractured",
+    "Gingivitis",
+    "Healthy Tooth",
+    "Malocclusion",
+    "Plaque and Tartar",
+    "Tooth Caries",
+    "Tooth Discoloration",
+    "Tooth Erosion",
   ];
 
   @override
@@ -70,61 +70,89 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     await _classifyImage(image.path);
   }
 
-  Future<void> _classifyImage(String path) async {
-    final recognitions = await Tflite.runModelOnImage(
-      path: path,
-      imageMean: 0.0,
-      imageStd: 255.0,
-      numResults: 2,
-      threshold: 0.2,
-      asynch: true,
-    );
+  // 1) Helper: clean TFLite label like "0 gingivitis" -> "gingivitis"
+  String _cleanLabel(String raw) {
+    final s = raw.trim();
+    final sp = s.split(' ');
+    if (sp.isNotEmpty && int.tryParse(sp.first) != null && sp.length > 1) {
+      return s.substring(s.indexOf(' ') + 1).trim();
+    }
+    return s;
+  }
 
-    if (recognitions == null || recognitions.isEmpty) {
-      devtools.log("recognitions is Null");
+// 2) Classify with typical MobileNet/EfficientNet normalization
+  Future<void> _classifyImage(String path) async {
+    try {
+      final recognitions = await Tflite.runModelOnImage(
+        path: path,
+        imageMean: 127.5, // typical CNN normalization
+        imageStd: 127.5,
+        numResults: 3,
+        threshold: 0.05, // score filter before sorting
+        asynch: true,
+      );
+
+      if (!mounted) return;
+
+      if (recognitions == null || recognitions.isEmpty) {
+        setState(() {
+          label = "No detection";
+          diseaseDescription = "Please try again with a clearer image.";
+        });
+        return;
+      }
+
+      // Take top-1
+      final result = recognitions.first;
+      final detectedLabelRaw = result['label'].toString();
+      final detectedLabel = _cleanLabel(detectedLabelRaw); // <-- sanitize
+      final detectedConfidence = (result['confidence'] * 100);
+
+      // Relax threshold to 60%
+      const minConfidence = 60.0;
+
+      if (validDiseases
+              .map((e) => e.toLowerCase())
+              .contains(detectedLabel.toLowerCase()) &&
+          detectedConfidence >= minConfidence) {
+        setState(() {
+          label = detectedLabel;
+          confidence = detectedConfidence;
+        });
+        await _fetchDiseaseDescription(detectedLabel);
+      } else {
+        setState(() {
+          label = "Not an Oral Problem";
+          confidence = detectedConfidence;
+          diseaseDescription =
+              "Try again with a clearer image or better lighting.";
+          services = [];
+        });
+      }
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        label = "No detection";
-        diseaseDescription = "Please try again with a clearer image.";
-      });
-      return;
-    }
-
-    final result = recognitions.first;
-    final detectedLabel = result['label'].toString();
-    final detectedConfidence = (result['confidence'] * 100);
-
-    if (!mounted) return;
-
-    if (validDiseases
-            .map((e) => e.toLowerCase())
-            .contains(detectedLabel.toLowerCase()) &&
-        detectedConfidence >= 80.0) {
-      setState(() {
-        label = detectedLabel;
-        confidence = detectedConfidence;
-      });
-      await _fetchDiseaseDescription(detectedLabel);
-    } else {
-      setState(() {
-        label = "Not an Oral Problem";
-        confidence = 0.0;
-        diseaseDescription = "Try again with a clearer image.";
+        label = "Error";
+        diseaseDescription = "Failed to run model. Please try again.";
       });
     }
   }
 
+// 3) Case-insensitive disease lookup
   Future<void> _fetchDiseaseDescription(String diseaseName) async {
     try {
       final diseaseResponse = await Supabase.instance.client
           .from('disease')
           .select('disease_id, description')
-          .eq('disease_name', diseaseName.trim())
+          .ilike('disease_name', diseaseName.trim()) // <-- case-insensitive
           .maybeSingle();
+
+      if (!mounted) return;
 
       if (diseaseResponse == null) {
         setState(() {
           diseaseDescription = "No description found.";
+          services = [];
         });
         return;
       }
@@ -136,17 +164,16 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
           .eq('disease_id', diseaseId)
           .eq('status', 'active');
 
-      if (!mounted) return;
       setState(() {
         diseaseDescription =
             diseaseResponse['description'] ?? 'No description available.';
         services = List<Map<String, dynamic>>.from(serviceResponse);
       });
     } catch (e) {
-      devtools.log("Error fetching disease description:");
       if (!mounted) return;
       setState(() {
         diseaseDescription = "Error retrieving disease info.";
+        services = [];
       });
     }
   }

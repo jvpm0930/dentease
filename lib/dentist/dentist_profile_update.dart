@@ -154,8 +154,8 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        "Tap to change photo (1x1 profile)",
-                        style: TextStyle(color: Colors.black54, fontSize: 14),
+                        "UPDATE PROFILE PICTURE",
+                        style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
                       const SizedBox(height: 30),
 

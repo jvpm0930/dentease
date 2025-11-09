@@ -33,10 +33,25 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
     setState(() {
       _bookingsFuture = supabase
           .from('bookings')
-          .select('booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, services(service_name, service_price), clinics(clinic_name), patients(firstname, lastname, email, phone)')
+          .select(
+              'booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, services(service_name, service_price), clinics(clinic_name), patients(firstname, lastname, email, phone)')
           .or('status.eq.approved, status.eq.completed')
           .eq('patient_id', widget.patientId);
     });
+  }
+
+  // Fade-only transition route
+  Route<T> _fadeRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final fade =
+            CurvedAnimation(parent: animation, curve: Curves.easeInOut);
+        return FadeTransition(opacity: fade, child: child);
+      },
+    );
   }
 
   @override
@@ -46,8 +61,11 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text(
-            "Approved Booking Request",
-            style: TextStyle(color: Colors.white),
+            "Approved Appointments",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -56,58 +74,45 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
         ),
         body: Column(
           children: [
-            // Buttons for switching between Approved & Pending
+            // Buttons for switching between Approved, Pending, Rejected
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: null, // Disabled (Already on this page)
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[300],
-                        foregroundColor: Colors.grey[600],
-                      ),
-                      child: const Text("Approved"),
+                    child: _segButton(
+                      label: "Approved",
+                      isActive: true, // current page
+                      onPressed: null,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
+                    child: _segButton(
+                      label: "Pending",
+                      isActive: false,
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                PatientBookingPend(patientId: widget.patientId),
-                          ),
+                          _fadeRoute(
+                              PatientBookingPend(patientId: widget.patientId)),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("Pending"),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
+                    child: _segButton(
+                      label: "Rejected",
+                      isActive: false,
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                PatientBookingRej(patientId: widget.patientId),
-                          ),
+                          _fadeRoute(
+                              PatientBookingRej(patientId: widget.patientId)),
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("Rejected"),
                     ),
                   ),
                 ],
@@ -157,24 +162,25 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: booking['status'] == 'approved'
-                                        ? Colors.blue
+                                        ? const Color(0xFF103D7E)
                                         : booking['status'] == 'completed'
                                             ? Colors.green
-                                            : Colors.black, // default color
+                                            : Colors.black,
                                   ),
                                 ),
                               ],
                             ),
                             trailing: GestureDetector(
                               onTap: () {
-                                // Navigate to details page, passing the booking data
                                 final clinicId = booking['clinic_id'];
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => PatientBookingDetailsPage(
-                                        booking: booking,
-                                        clinicId: clinicId),
+                                    builder: (context) =>
+                                        PatientBookingDetailsPage(
+                                      booking: booking,
+                                      clinicId: clinicId,
+                                    ),
                                   ),
                                 );
                               },
@@ -196,4 +202,27 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
       ),
     );
   }
+}
+Widget _segButton({
+  required String label,
+  required bool isActive,
+  required VoidCallback? onPressed,
+}) {
+  const activeBg = Color(0xFF103D7E);
+  const activeFg = Colors.white;
+  final inactiveBg = const Color.fromARGB(0, 255, 255, 255)!;
+  final inactiveFg = const Color.fromARGB(74, 0, 0, 0)!;
+
+  return ElevatedButton(
+    onPressed: isActive ? null : onPressed,
+    style: ElevatedButton.styleFrom(
+      // When active (current page), we disable the button but style it as active
+      disabledBackgroundColor: isActive ? activeBg : null,
+      disabledForegroundColor: isActive ? activeFg : null,
+      // When inactive (other pages), make it look like a disabled/grey button but clickable
+      backgroundColor: isActive ? null : inactiveBg,
+      foregroundColor: isActive ? null : inactiveFg,
+    ),
+    child: Text(label),
+  );
 }

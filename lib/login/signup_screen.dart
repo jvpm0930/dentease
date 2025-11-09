@@ -156,7 +156,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           prefixIcon: Padding(
                             padding: EdgeInsets.symmetric(horizontal: 12),
                             child: Icon(Icons.wc_rounded,
-                                color: Colors.indigo[900]),
+                                color: Color(0xFF103D7E)),
                           ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(
@@ -209,14 +209,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         hintText: hint,
         prefixIcon: Padding(
           padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Icon(icon, color: Colors.indigo[900]),
+          child: Icon(icon, color: Color(0xFF103D7E)),
         ),
         // Only show eye toggle for password fields
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.indigo[900],
+                  color: Color(0xFF103D7E),
                 ),
                 onPressed: () {
                   setState(() {
@@ -247,7 +247,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.indigo, // Dark blue text
+            color: Color(0xFF103D7E), 
           ),
         ));
   }
@@ -267,7 +267,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             TextSpan(
               text: "Login",
               style: TextStyle(
-                color: Colors.blueAccent,
+                color: Color(0xFF103D7E),
                 fontWeight: FontWeight.bold,
               ),
             ),

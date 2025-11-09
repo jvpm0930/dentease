@@ -7,6 +7,7 @@ import 'package:dentease/patients/patient_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 🟢 Added
 
 // Initialize notifications
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -57,13 +58,14 @@ class _PatientFooterState extends State<PatientFooter> {
   bool hasApprovedBookings = false;
   Timer? refreshTimer;
 
-  final Set<String> notifiedMessageIds = {};
-  final Set<String> notifiedApprovedBookingIds = {};
+  Set<String> notifiedMessageIds = {};
+  Set<String> notifiedApprovedBookingIds = {};
 
   @override
   void initState() {
     super.initState();
     initNotifications();
+    _loadNotifiedIds(); // 🟢 Load saved IDs on startup
     fetchUnreadMessages();
     fetchApprovedBookings();
     startAutoRefresh();
@@ -73,6 +75,26 @@ class _PatientFooterState extends State<PatientFooter> {
   void dispose() {
     stopAutoRefresh();
     super.dispose();
+  }
+
+  //  Save IDs persistently
+  Future<void> _saveNotifiedIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        'notifiedMessageIds', notifiedMessageIds.toList());
+    await prefs.setStringList(
+        'notifiedApprovedBookingIds', notifiedApprovedBookingIds.toList());
+  }
+
+  //  Load saved IDs persistently
+  Future<void> _loadNotifiedIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      notifiedMessageIds =
+          prefs.getStringList('notifiedMessageIds')?.toSet() ?? {};
+      notifiedApprovedBookingIds =
+          prefs.getStringList('notifiedApprovedBookingIds')?.toSet() ?? {};
+    });
   }
 
   void startAutoRefresh() {
@@ -108,6 +130,7 @@ class _PatientFooterState extends State<PatientFooter> {
         final messageId = msg['message_id'].toString();
         if (!notifiedMessageIds.contains(messageId)) {
           notifiedMessageIds.add(messageId);
+          await _saveNotifiedIds(); // Save updates
 
           final clinicData = await supabase
               .from('clinics')
@@ -147,6 +170,7 @@ class _PatientFooterState extends State<PatientFooter> {
         final bookingId = booking['booking_id'].toString();
         if (!notifiedApprovedBookingIds.contains(bookingId)) {
           notifiedApprovedBookingIds.add(bookingId);
+          await _saveNotifiedIds(); // Save updates
 
           final clinicData = await supabase
               .from('clinics')
@@ -178,7 +202,7 @@ class _PatientFooterState extends State<PatientFooter> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.blue,
+              color: const Color(0xFF103D7E), // solid blue (#103D7E)
               borderRadius: BorderRadius.circular(30),
               boxShadow: const [
                 BoxShadow(

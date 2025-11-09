@@ -26,14 +26,15 @@ class PatientBookingPage extends StatefulWidget {
 
 class _PatientBookingPageState extends State<PatientBookingPage> {
   final supabase = Supabase.instance.client;
+
   DateTime selectedDate = DateTime.now();
-  TimeOfDay? selectedTime;
   CalendarFormat calendarFormat = CalendarFormat.month;
   bool isBooking = false;
   String? errorMessage;
 
-  List<int> availableHours = []; // Available hours from staff schedule
-  List<int> bookedHours = []; // Booked slots
+  List<int> availableHours = [];
+  List<int> bookedHours = [];
+  int? selectedHour; // Replaces TimeOfDay for chip-based selection
 
   @override
   void initState() {
@@ -41,32 +42,51 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
     _fetchAvailableSlots();
   }
 
-  /// Fetch available staff schedule and booked slots
+  // Format an hour int (0-23) to "h:00 AM/PM"
+  String _formatHour(int hour) {
+    final time = TimeOfDay(hour: hour, minute: 0);
+    return time.format(context);
+  }
+
+  // Create a fade-only route for smooth navigation
+  Route<T> _fadeRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final fade =
+            CurvedAnimation(parent: animation, curve: Curves.easeInOut);
+        return FadeTransition(opacity: fade, child: child);
+      },
+    );
+  }
+
   Future<void> _fetchAvailableSlots() async {
     List<int> tempAvailableHours = [];
     List<int> tempBookedHours = [];
 
     try {
-      // Fetch staff schedule from `clinic_sched`
+      // Fetch staff schedule
       final scheduleResponse = await supabase
           .from('clinics_sched')
           .select('date, start_time, end_time')
           .eq('clinic_id', widget.clinicId);
 
       for (var schedule in scheduleResponse) {
-        DateTime scheduleDate = DateTime.parse(schedule['date']);
+        final scheduleDate = DateTime.parse(schedule['date']);
         if (scheduleDate.year == selectedDate.year &&
             scheduleDate.month == selectedDate.month &&
             scheduleDate.day == selectedDate.day) {
-          int startTime = schedule['start_time'];
-          int endTime = schedule['end_time'];
-          for (int i = startTime; i <= endTime; i++) {
-            tempAvailableHours.add(i);
+          final int startTime = schedule['start_time'];
+          final int endTime = schedule['end_time'];
+          for (int h = startTime; h <= endTime; h++) {
+            tempAvailableHours.add(h);
           }
         }
       }
 
-      // Fetch booked slots from `bookings`
+      // Fetch booked slots
       final bookedResponse = await supabase
           .from('bookings')
           .select('date, start_time')
@@ -74,35 +94,41 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
           .eq('service_id', widget.serviceId);
 
       tempBookedHours = bookedResponse
-          .where((booking) {
-            final bookingDate = DateTime.parse(booking['date']);
-            return bookingDate.year == selectedDate.year &&
-                bookingDate.month == selectedDate.month &&
-                bookingDate.day == selectedDate.day;
+          .where((b) {
+            final d = DateTime.parse(b['date']);
+            return d.year == selectedDate.year &&
+                d.month == selectedDate.month &&
+                d.day == selectedDate.day;
           })
-          .map<int>((booking) => booking['start_time'])
+          .map<int>((b) {
+            // start_time might be stored as string or int in your DB
+            final v = b['start_time'];
+            if (v is int) return v;
+            if (v is String) return int.tryParse(v) ?? -1;
+            return -1;
+          })
+          .where((v) => v >= 0)
           .toList();
 
-      // Compute final available hours (excluding booked ones)
-      final filteredAvailableHours = tempAvailableHours
-          .where((hour) => !tempBookedHours.contains(hour))
-          .toList();
+      final filteredAvailable = tempAvailableHours
+          .where((h) => !tempBookedHours.contains(h))
+          .toSet()
+          .toList()
+        ..sort();
 
       setState(() {
-        availableHours = filteredAvailableHours;
+        availableHours = filteredAvailable;
         bookedHours = tempBookedHours;
-        selectedTime = null; // Reset time selection each day
+        selectedHour = null; // Reset selection each day
       });
     } catch (e) {
-      print('Error fetching slots: $e');
+      setState(() => errorMessage = 'Error fetching slots: $e');
     }
   }
 
   Future<void> _bookService() async {
-    if (selectedTime == null) {
-      setState(() {
-        errorMessage = "Please select a time.";
-      });
+    if (selectedHour == null) {
+      setState(() => errorMessage = "Please select a time.");
       return;
     }
 
@@ -120,16 +146,16 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
       return;
     }
 
-    final DateTime appointmentDateTime = DateTime(
+    final appointmentDateTime = DateTime(
       selectedDate.year,
       selectedDate.month,
       selectedDate.day,
-      selectedTime!.hour,
-      selectedTime!.minute,
+      selectedHour!, // hour selected via chip
+      0,
     );
 
-    int startTime = selectedTime!.hour;
-    int endTime = startTime + 1;
+    final startTime = selectedHour!;
+    final endTime = startTime + 1;
 
     try {
       await supabase.from('bookings').insert({
@@ -137,26 +163,20 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
         'clinic_id': widget.clinicId,
         'service_id': widget.serviceId,
         'date': appointmentDateTime.toIso8601String(),
-        'start_time': startTime.toString(),
+        'start_time': startTime.toString(), // keep as string for compatibility
         'end_time': endTime.toString(),
         'status': 'pending',
       });
 
-      // Navigate to a success page
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => PatientBookingSuccess(),
-        ),
+        _fadeRoute(PatientBookingSuccess()),
       );
     } catch (e) {
-      setState(() {
-        errorMessage = "Error booking service: $e";
-      });
+      setState(() => errorMessage = "Error booking service: $e");
     } finally {
-      setState(() {
-        isBooking = false;
-      });
+      setState(() => isBooking = false);
     }
   }
 
@@ -166,124 +186,224 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: Text("Book ${widget.serviceName}"),
+          title: Text("Set Appointment"), titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold, 
+          ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Service: ${widget.serviceName}",
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                Text("Price: ${widget.servicePrice}",
-                    style: const TextStyle(fontSize: 16)),
-                const SizedBox(height: 10),
-                Text("Details: ${widget.serviceDetail}",
-                    style: const TextStyle(fontSize: 15)),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                const Text("Select a Date:",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                TableCalendar(
-                  firstDay: DateTime.now(),
-                  lastDay: DateTime.now().add(const Duration(days: 30)),
-                  focusedDay: selectedDate,
-                  calendarFormat: calendarFormat,
-                  selectedDayPredicate: (day) {
-                    return isSameDay(selectedDate, day);
-                  },
-                  onDaySelected: (selectedDay, focusedDay) {
-                    setState(() {
-                      selectedDate = selectedDay;
-                    });
-                    _fetchAvailableSlots();
-                  },
-                  calendarStyle: const CalendarStyle(
-                    todayDecoration: BoxDecoration(
-                        color: Colors.blueAccent, shape: BoxShape.circle),
-                    selectedDecoration: BoxDecoration(
-                        color: Colors.green, shape: BoxShape.circle),
-                  ),
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                  ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Service Summary Card
+              _CardSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF103D7E),
+                        child: const Icon(Icons.medical_services,
+                            color: Colors.white),
+                      ),
+                      title: Text(
+                        widget.serviceName,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text("Price: ${widget.servicePrice}"),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.serviceDetail,
+                      style:
+                          const TextStyle(fontSize: 14, color: Colors.black87),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 5),
-                const Text("Select a Time:",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                // Dropdown Menu for Time Selection
-                availableHours.isEmpty
-                    ? const Text(
+              ),
+
+              const SizedBox(height: 12),
+
+              // Date Selection Card
+              _CardSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionTitle(
+                        icon: Icons.date_range, title: "Select a Date"),
+                    const SizedBox(height: 8),
+                    TableCalendar(
+                      firstDay: DateTime.now(),
+                      lastDay: DateTime.now().add(const Duration(days: 30)),
+                      focusedDay: selectedDate,
+                      calendarFormat: calendarFormat,
+                      selectedDayPredicate: (day) =>
+                          isSameDay(selectedDate, day),
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() => selectedDate = selectedDay);
+                        _fetchAvailableSlots();
+                      },
+                      calendarStyle: const CalendarStyle(
+                        todayDecoration: BoxDecoration(
+                            color: Colors.blueAccent, shape: BoxShape.circle),
+                        selectedDecoration: BoxDecoration(
+                            color: Colors.green, shape: BoxShape.circle),
+                      ),
+                      headerStyle: const HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Time Selection Card
+              _CardSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionTitle(
+                        icon: Icons.access_time, title: "Select a Time"),
+                    const SizedBox(height: 10),
+                    if (availableHours.isEmpty)
+                      const Text(
                         "No available slots for this date.",
                         style: TextStyle(color: Colors.red, fontSize: 14),
                       )
-                    : DropdownButton<TimeOfDay>(
-                        hint: const Text("Pick a time slot for your appointment"),
-                        isExpanded: true,
-                        value: selectedTime,
-                        items: availableHours.map((hour) {
-                          final time = TimeOfDay(hour: hour, minute: 0);
-                          return DropdownMenuItem(
-                            value: time,
-                            child: Text(time.format(context)),
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: availableHours.map((hour) {
+                          final isSelected = selectedHour == hour;
+                          return ChoiceChip(
+                            label: Text(_formatHour(hour)),
+                            selected: isSelected,
+                            onSelected: (_) {
+                              setState(() => selectedHour = hour);
+                            },
+                            selectedColor: const Color(0xFF103D7E),
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                            backgroundColor: Colors.grey[200],
                           );
                         }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedTime = value;
-                          });
-                        },
                       ),
-
-                if (errorMessage != null)
-                  Text(errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14,)),
-
-                const SizedBox(height: 5),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isBooking || availableHours.isEmpty
-                        ? null
-                        : _bookService,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.indigo[900],
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      elevation: 5,
-                    ),
-                    child: isBooking
-                        ? const CircularProgressIndicator()
-                        : const Text(
-                            "Confirm Booking",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                  ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(errorMessage!,
+                          style: const TextStyle(color: Colors.red)),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 50),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Confirm Card
+              _CardSection(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isBooking || availableHours.isEmpty
+                            ? null
+                            : _bookService,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF103D7E),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: isBooking
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text(
+                                "Confirm Appointment",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// Reusable section card with padding and subtle shadow
+class _CardSection extends StatelessWidget {
+  final Widget child;
+  const _CardSection({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.98),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _SectionTitle({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF103D7E)),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:dentease/login/login_screen.dart';
 import 'package:dentease/patients/patient_prof_update.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
@@ -56,6 +57,41 @@ class _PatientProfileState extends State<PatientProfile> {
     }
   }
 
+  Future<void> _logout(BuildContext context) async {
+    try {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            ElevatedButton(
+              child: const Text('Logout'),
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await Supabase.instance.client.auth.signOut();
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
+    }
+  }
+
   Widget _buildProfilePicture() {
     return CircleAvatar(
       radius: 80,
@@ -83,7 +119,7 @@ class _PatientProfileState extends State<PatientProfile> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blueAccent),
+          Icon(icon, color: const Color(0xFF103D7E)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -116,7 +152,10 @@ class _PatientProfileState extends State<PatientProfile> {
         appBar: AppBar(
           title: const Text(
             "My Profile",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -146,10 +185,7 @@ class _PatientProfileState extends State<PatientProfile> {
                         patientDetails?['phone'] ?? ''),
                     _buildInfoTile(
                         Icons.badge, "Role", patientDetails?['role'] ?? ''),
-                    _buildInfoTile(Icons.lock, "Password",
-                        patientDetails?[''] ?? '******'),
-
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
 
                     // Edit Button
                     ElevatedButton.icon(
@@ -173,7 +209,7 @@ class _PatientProfileState extends State<PatientProfile> {
                               color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: const Color(0xFF103D7E),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 40, vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -181,6 +217,27 @@ class _PatientProfileState extends State<PatientProfile> {
                           ),
                         ),
                       ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      label: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            Colors.red, // Logout buttons usually use red
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async => await _logout(context),
+                    ),
                     const SizedBox(height: 50),
                   ],
                 ),

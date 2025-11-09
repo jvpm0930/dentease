@@ -201,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     hintText: 'Email',
-                    prefixIcon: Icon(Icons.mail, color: Colors.indigo[900]),
+                    prefixIcon: Icon(Icons.mail, color: const Color(0xFF103D7E)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -210,13 +210,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscurePassword, // use the toggle
                   decoration: InputDecoration(
                     hintText: 'Password',
-                    prefixIcon: Icon(Icons.lock, color: Colors.indigo[900]),
+                    prefixIcon: Icon(Icons.lock, color: const Color(0xFF103D7E)),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_off
                             : Icons.visibility,
-                        color: Colors.indigo[900],
+                        color: const Color(0xFF103D7E),
                       ),
                       onPressed: () {
                         setState(() {
@@ -258,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.indigo[900]),
+                        color: const Color(0xFF103D7E)),
                   ),
                 ),
                 TextButton(
@@ -274,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: "Sign up",
                           style: TextStyle(
-                            color: Colors.blueAccent,
+                            color: const Color(0xFF103D7E),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -302,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.indigo[900],
+                      color: const Color(0xFF103D7E),
                     ),
                   ),
                 ),

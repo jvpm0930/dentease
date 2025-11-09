@@ -33,40 +33,37 @@ class PatientChatPage extends StatefulWidget {
 class _PatientChatPageState extends State<PatientChatPage> {
   final supabase = Supabase.instance.client;
   final TextEditingController messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> messages = [];
-  Timer? refreshTimer;
   StreamSubscription<List<Map<String, dynamic>>>? _messageSubscription;
+
+  bool _autoScrollOnNewMessage = true;
+  bool _didInitialScroll = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final threshold = 80.0;
+      final atBottom = _scrollController.position.pixels >=
+          (_scrollController.position.maxScrollExtent - threshold);
+      _autoScrollOnNewMessage = atBottom;
+    });
     _listenForMessages();
     fetchMessages();
-    startAutoRefresh();
-    markClinicMessagesAsRead(); // Mark unread messages from clinic on open
+    markClinicMessagesAsRead();
   }
 
   @override
   void dispose() {
     _messageSubscription?.cancel();
     messageController.dispose();
-    stopAutoRefresh();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void startAutoRefresh() {
-    refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      fetchMessages();
-    });
-  }
-
-  void stopAutoRefresh() {
-    refreshTimer?.cancel();
-    refreshTimer = null;
-  }
-
-  /// Fetch all messages between this clinic and patient
   Future<void> fetchMessages() async {
     try {
       final response = await supabase
@@ -85,13 +82,18 @@ class _PatientChatPageState extends State<PatientChatPage> {
       setState(() {
         messages = List<Map<String, dynamic>>.from(filtered);
       });
-    } catch (e) {
-      debugPrint('Error fetching messages');
-    }
-  }
 
-  /// Realtime listener for chat messages
-  int lastUnreadCount = 0;
+      if (!_didInitialScroll) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController
+                .jumpTo(_scrollController.position.maxScrollExtent);
+          }
+          _didInitialScroll = true;
+        });
+      }
+    } catch (_) {}
+  }
 
   void _listenForMessages() {
     _messageSubscription =
@@ -103,22 +105,28 @@ class _PatientChatPageState extends State<PatientChatPage> {
               msg['receiver_id'] == widget.patientId));
 
       final List<Map<String, dynamic>> newMessages =
-          List<Map<String, dynamic>>.from(relevantMessages);
+          List<Map<String, dynamic>>.from(relevantMessages)
+            ..sort((a, b) =>
+                (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
 
       setState(() {
         messages = newMessages;
       });
 
-      // Update unread count tracker
-      final unreadMessages = newMessages.where((msg) =>
-          msg['sender_id'] == widget.clinicId &&
-          msg['receiver_id'] == widget.patientId &&
-          (msg['is_read'] == false || msg['is_read'] == null));
-      lastUnreadCount = unreadMessages.length;
+      if (_autoScrollOnNewMessage) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
     });
   }
 
-  /// Marks all unread clinic messages as read
   Future<void> markClinicMessagesAsRead() async {
     try {
       await supabase
@@ -127,12 +135,9 @@ class _PatientChatPageState extends State<PatientChatPage> {
           .eq('sender_id', widget.clinicId)
           .eq('receiver_id', widget.patientId)
           .eq('is_read', false);
-    } catch (e) {
-      debugPrint('Error marking clinic messages as read');
-    }
+    } catch (_) {}
   }
 
-  /// Sends message (patient → clinic)
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
     try {
@@ -143,30 +148,20 @@ class _PatientChatPageState extends State<PatientChatPage> {
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'is_read': false,
       });
-
-      // Clear input and reset unread count
       messageController.clear();
-      setState(() {
-        lastUnreadCount = 0;
-      });
-
-      // Mark all clinic messages as read after replying
-      await markClinicMessagesAsRead();
-    } catch (e) {
-      debugPrint("Error sending message");
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final Map<String, List<Map<String, dynamic>>> groupedMessages = {};
-
     for (var msg in messages) {
       final ts =
           msg['timestamp']?.toString() ?? DateTime.now().toIso8601String();
       final dateKey = _formatDate(ts);
       groupedMessages.putIfAbsent(dateKey, () => []).add(msg);
     }
+    final dates = groupedMessages.keys.toList();
 
     return BackgroundCont(
       child: Scaffold(
@@ -185,10 +180,11 @@ class _PatientChatPageState extends State<PatientChatPage> {
           children: [
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.only(top: 8),
-                itemCount: groupedMessages.length,
+                itemCount: dates.length,
                 itemBuilder: (context, index) {
-                  final date = groupedMessages.keys.elementAt(index);
+                  final date = dates[index];
                   final dayMessages = groupedMessages[date]!;
 
                   return Column(
@@ -223,7 +219,7 @@ class _PatientChatPageState extends State<PatientChatPage> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: isMe
-                                  ? Colors.blue[300]
+                                  ? const Color(0xFF103D7E)
                                   : (isUnread
                                       ? Colors.grey[200]
                                       : Colors.grey[300]),
@@ -251,14 +247,15 @@ class _PatientChatPageState extends State<PatientChatPage> {
                                   children: [
                                     Text(
                                       _formatTimestamp(ts),
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 10,
-                                        color: Colors.grey[700],
+                                        color:
+                                            Color.fromARGB(255, 152, 152, 152),
                                       ),
                                     ),
                                     if (isUnread) ...[
                                       const SizedBox(width: 6),
-                                      Text(
+                                      const Text(
                                         "Unread",
                                         style: TextStyle(
                                           fontSize: 10,
@@ -294,10 +291,11 @@ class _PatientChatPageState extends State<PatientChatPage> {
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 10),
                       ),
+                      onSubmitted: sendMessage,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
+                    icon: const Icon(Icons.send, color: Color(0xFF103D7E)),
                     onPressed: () => sendMessage(messageController.text),
                   ),
                 ],
