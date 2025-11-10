@@ -1,3 +1,4 @@
+import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,44 +29,40 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
         isLoading = true;
       });
 
-      // Upload image to Supabase Storage (clinic-profile bucket)
       final fileBytes = await file.readAsBytes();
       final fileName =
           'clinic_${widget.clinicId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      final response = await supabase.storage
-          .from('clinic-profile') 
-          .uploadBinary(
+      await supabase.storage.from('clinic-profile').uploadBinary(
             fileName,
             fileBytes,
-            fileOptions: FileOptions(contentType: 'image/jpeg'),
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
           );
 
-      // Get the public URL of the uploaded image
       final newImageUrl =
           supabase.storage.from('clinic-profile').getPublicUrl(fileName);
 
-      // Update the clinic profile URL in Supabase
       await supabase.from('clinics').update({'profile_url': newImageUrl}).eq(
           'clinic_id', widget.clinicId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Profile image updated successfully!')),
+          const SnackBar(content: Text('Profile image updated successfully!')),
         );
         Navigator.pop(context, true);
       }
-        } catch (e) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error uploading image: $e')),
         );
       }
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -77,66 +74,181 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Update Profile Image'),
-        backgroundColor: Colors.blue,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    // Cache-bust the preview so updated images show right away
+    final displayUrl =
+        (widget.profileUrl != null && widget.profileUrl!.isNotEmpty)
+            ? '${widget.profileUrl}?t=${DateTime.now().millisecondsSinceEpoch}'
+            : null;
+
+    return BackgroundCont(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Update Profile Image', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Stack(
           children: [
-            // Show current image
-            widget.profileUrl != null
-                ? ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(15), // Optional rounded corners
-                    child: Image.network(
-                      widget.profileUrl!,
-                      width: 200,
-                      height: 200,
-                      fit: BoxFit
-                          .cover, // Ensures the image fills the container properly
-                      errorBuilder: (context, error, stackTrace) {
-                        return Image.asset(
-                          'assets/logo2.png',
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.cover, // Same fit for fallback
-                        );
-                      },
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Card preview
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade300),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
                     ),
-                  )
-                : ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(15), // Optional rounded corners
-                    child: Image.asset(
-                      'assets/logo2.png',
-                      width: 200,
-                      height: 200,
-                      fit: BoxFit.cover, // Fallback image with proper fit
+                    child: Column(
+                      children: [
+                        // Image preview (1x1 style)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: 220,
+                            height: 220,
+                            color: Colors.grey.shade200,
+                            child: displayUrl != null
+                                ? Image.network(
+                                    displayUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.asset(
+                                        'assets/logo2.png',
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  )
+                                : Image.asset(
+                                    'assets/logo2.png',
+                                    fit: BoxFit.cover,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Recommended: 1x1 (square), JPG/PNG • Max ~2MB",
+                          style: TextStyle(color: Colors.black54),
+                        ),
+                      ],
                     ),
                   ),
-
-            const SizedBox(height: 10),
-            const Text("1x1 dimension"),
-            const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              onPressed: isLoading ? null : _pickImage,
-              icon: const Icon(Icons.image),
-              label: const Text('Choose New Image', style: TextStyle(color: Colors.white),),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      
+                  const SizedBox(height: 16),
+      
+                  // Actions card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade300),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.photo, color: Color(0xFF103D7E)),
+                            SizedBox(width: 8),
+                            Text(
+                              "Select a new image",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : () async {
+                                        final picker = ImagePicker();
+                                        final file = await picker.pickImage(
+                                          source: ImageSource.gallery,
+                                        );
+                                        await _uploadImage(file);
+                                      },
+                                icon: const Icon(Icons.image),
+                                label: const Text('Gallery'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF103D7E),
+                                  side:
+                                      const BorderSide(color: Color(0xFF103D7E)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : () async {
+                                        final picker = ImagePicker();
+                                        final file = await picker.pickImage(
+                                          source: ImageSource.camera,
+                                        );
+                                        await _uploadImage(file);
+                                      },
+                                icon: const Icon(Icons.photo_camera),
+                                label: const Text('Camera'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF103D7E),
+                                  side:
+                                      const BorderSide(color: Color(0xFF103D7E)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "After selecting, upload will start automatically.",
+                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-
+      
+            // Loading overlay
             if (isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
+              Container(
+                color: Colors.black26,
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
               ),
           ],
         ),

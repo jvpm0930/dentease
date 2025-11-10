@@ -28,7 +28,7 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
   String? genderValue;
   String? profileUrl;
   bool isLoading = true;
-  bool _obscurePassword = true; // make it mutable
+  final bool _obscurePassword = true; // make it mutable
 
   @override
   void initState() {
@@ -309,7 +309,6 @@ class _FieldTile extends StatelessWidget {
   final Widget child;
 
   const _FieldTile({
-    super.key,
     required this.icon,
     required this.label,
     required this.child,

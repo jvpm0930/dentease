@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'dart:async';
 
 String formatDateTime(String dateTime) {
   DateTime parsedDate = DateTime.parse(dateTime);
@@ -28,7 +27,6 @@ class BookingDetailsPage extends StatefulWidget {
   State<BookingDetailsPage> createState() => _BookingDetailsPageState();
 }
 
-
 class _BookingDetailsPageState extends State<BookingDetailsPage> {
   final supabase = Supabase.instance.client;
 
@@ -36,6 +34,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   bool loading = true;
   bool uploading = false;
 
+  static const Color kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -58,6 +57,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         loading = false;
       });
@@ -71,7 +71,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.camera);
 
-    if (image == null) return; // user cancelled
+    if (image == null) return;
 
     setState(() => uploading = true);
 
@@ -81,18 +81,14 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       final bookingId = widget.booking['booking_id'];
       final filePath = 'before/$bookingId/$fileName';
 
-      // Upload to Supabase Storage (bucket name must exist)
       await supabase.storage.from('before').upload(filePath, File(image.path));
 
-      // Get public URL
       final publicUrl = supabase.storage.from('before').getPublicUrl(filePath);
 
-      // Update the bookings table with URL
-      await supabase.from('bookings').update({
-        'before_url': publicUrl,
-      }).eq('booking_id', bookingId);
+      await supabase
+          .from('bookings')
+          .update({'before_url': publicUrl}).eq('booking_id', bookingId);
 
-      // Refresh booking data
       final updatedBooking = await supabase
           .from('bookings')
           .select('before_url')
@@ -103,70 +99,107 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
         widget.booking['before_url'] = updatedBooking['before_url'];
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Photo uploaded successfully!")),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error uploading photo: $e")),
       );
     } finally {
-      setState(() => uploading = false);
+      if (mounted) setState(() => uploading = false);
     }
   }
 
-  Future<void> _afterImageandUpload() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.camera);
-
-    if (image == null) return; // user cancelled
-
-    setState(() => uploading = true);
-
-    try {
-      final fileExt = path.extension(image.path);
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}$fileExt';
-      final bookingId = widget.booking['booking_id'];
-      final filePath = 'after/$bookingId/$fileName';
-
-      // Upload to Supabase Storage (bucket name must exist)
-      await supabase.storage.from('after').upload(filePath, File(image.path));
-
-      // Get public URL
-      final publicUrl = supabase.storage.from('after').getPublicUrl(filePath);
-
-      // Update the bookings table with URL
-      await supabase.from('bookings').update({
-        'after_url': publicUrl,
-      }).eq('booking_id', bookingId);
-
-      // Refresh booking data
-      final updatedBooking = await supabase
-          .from('bookings')
-          .select('after_url')
-          .eq('booking_id', bookingId)
-          .single();
-
-      setState(() {
-        widget.booking['after_url'] = updatedBooking['after_url'];
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Photo uploaded successfully!")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error uploading photo: $e")),
-      );
-    } finally {
-      setState(() => uploading = false);
-    }
+  // Reusable photo tile (Before/After)
+  Widget _photoTile({
+    required String title,
+    required String? url,
+    required VoidCallback onCapture,
+  }) {
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(icon: Icons.photo_camera_outlined, title: title),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              height: 180,
+              color: Colors.grey.shade100,
+              child: (url != null && url.isNotEmpty)
+                  ? GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FullScreenImage(imageUrl: url),
+                          ),
+                        );
+                      },
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                      ),
+                    )
+                  : _imagePlaceholder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: uploading ? null : onCapture,
+              icon: const Icon(Icons.camera_alt, color: Colors.white),
+              label: const Text('Take A Photo'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: kPrimary,
+                side: const BorderSide(color: kPrimary),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-  
+
+  Widget _imagePlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.image_not_supported_outlined, color: Colors.black38),
+          SizedBox(height: 6),
+          Text('No image', style: TextStyle(color: Colors.black45)),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final booking = widget.booking;
+
+    final serviceName = booking['services']?['service_name']?.toString() ?? 'N/A';
+    final servicePrice =
+        booking['services']?['service_price']?.toString() ?? 'N/A';
+    final patientName =
+        "${booking['patients']?['firstname'] ?? ''} ${booking['patients']?['lastname'] ?? ''}".trim();
+    final patientEmail = booking['patients']?['email']?.toString() ?? 'N/A';
+    final patientPhone = booking['patients']?['phone']?.toString() ?? 'N/A';
+    final dateBooked = booking['date']?.toString() ?? '';
+
+    final beforeUrl = booking['before_url']?.toString();
 
     return BackgroundCont(
       child: Scaffold(
@@ -174,192 +207,189 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
         appBar: AppBar(
           title: const Text(
             "Booking Details",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow(
-                  "Service name:",
-                  booking['services']['service_name'],
-                  labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                _buildDetailRow("Service price:",
-                    "${booking['services']['service_price']}"),
-                _buildDetailRow("Patient name:",
-                    "${booking['patients']['firstname']} ${booking['patients']['lastname']}"),
-                _buildDetailRow("Patient email:", booking['patients']['email']),
-                _buildDetailRow(
-                    "Patient phone number:", booking['patients']['phone']),
-                _buildDetailRow(
-                    "Service date booked:", formatDateTime(booking['date'])),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final patientId = booking['patient_id'];
-                          final serviceId = booking['service_id'];
-                          final bookingId = booking['booking_id'];
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => BillCalculatorPage(
-                                clinicId: widget.clinicId,
-                                patientId: patientId,
-                                serviceId: serviceId,
-                                bookingId: bookingId,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Appointment Summary
+                  _SectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionTitle(
+                          icon: Icons.event_note_rounded,
+                          title: 'Appointment Summary',
                         ),
-                        child: const Text("Send Bill"),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final patientId = booking['patient_id'];
-                          final bookingId = booking['booking_id'];
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditBillPage(
-                                clinicId: widget.clinicId,
-                                patientId: patientId,
-                                bookingId: bookingId,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
+                        const SizedBox(height: 10),
+                        _buildDetailRow(
+                          "Service name:",
+                          serviceName,
+                          labelStyle: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                        child: const Text("Edit Bill"),
-                      ),
+                        _buildDetailRow("Service price:", servicePrice),
+                        _buildDetailRow("Patient name:", patientName),
+                        _buildDetailRow("Patient email:", patientEmail),
+                        _buildDetailRow("Patient phone number:", patientPhone),
+                        if (dateBooked.isNotEmpty)
+                          _buildDetailRow(
+                              "Service date booked:", formatDateTime(dateBooked)),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : bill != null
-                        ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Billing Actions
+                  _SectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionTitle(
+                          icon: Icons.request_page_outlined,
+                          title: 'Billing',
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
-                            const Text(
-                              "Bill Details:",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  final patientId = booking['patient_id'];
+                                  final serviceId = booking['service_id'];
+                                  final bookingId = booking['booking_id'];
 
-                            // Each label/value pair is a Row
-                            _buildDetailRow("Service name:", booking['services']['service_name']),
-                            _buildDetailRow("Service Price:", "${bill!['service_price']}"),
-                            _buildDetailRow("Medicine fee:", "${bill!['medicine_fee']}"),
-                            _buildDetailRow("Additional fee:", "${bill!['doctor_fee']}"),
-                            _buildDetailRow("Payment Method:", "${bill!['payment_mode']}"),
-                            _buildDetailRow("Total Amount:", "${bill!['total_amount']}"),
-                            _buildDetailRow("Received:", "${bill!['recieved_money']}"),
-                            _buildDetailRow("Change:", "${bill?['bill_change'] ?? 'None'}"),
-                          ],
-                        )
-                        : const Text(
-                            "No bill found for this booking.",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-                const Text(
-                  'Receipt Image:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (booking['before_url'] != null &&
-                    (booking['before_url'] as String).isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FullScreenImage(
-                                imageUrl: booking['before_url'],
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BillCalculatorPage(
+                                        clinicId: widget.clinicId,
+                                        patientId: patientId,
+                                        serviceId: serviceId,
+                                        bookingId: bookingId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kPrimary,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.send),
+                                label: const Text("Send Bill"),
                               ),
                             ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            booking['before_url'],
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  final patientId = booking['patient_id'];
+                                  final bookingId = booking['booking_id'];
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => EditBillPage(
+                                        clinicId: widget.clinicId,
+                                        patientId: patientId,
+                                        bookingId: bookingId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kPrimary,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.edit),
+                                label: const Text("Edit Bill"),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  )
-                else
-                  const Text(
-                    "No receipt image is available.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey,
+                      ],
                     ),
-                  ),           
-                const SizedBox(height: 20),
-                const Divider(thickness: 1.5, color: Colors.blueGrey),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _beforeImageandUpload,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: Text("Take A Photo"),
                   ),
-                ),
-                const SizedBox(height: 50),
-              ],
+                  const SizedBox(height: 12),
+
+                  // Bill Details
+                  _SectionCard(
+                    child: loading
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : (bill != null
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _SectionTitle(
+                                    icon: Icons.receipt_long_outlined,
+                                    title: 'Bill Details',
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _buildDetailRow(
+                                      "Service name:", serviceName),
+                                  _buildDetailRow("Service Price:",
+                                      "${bill!['service_price']}"),
+                                  _buildDetailRow("Medicine fee:",
+                                      "${bill!['medicine_fee']}"),
+                                  _buildDetailRow("Additional fee:",
+                                      "${bill!['doctor_fee']}"),
+                                  _buildDetailRow("Payment Method:",
+                                      "${bill!['payment_mode']}"),
+                                  _buildDetailRow("Total Amount:",
+                                      "${bill!['total_amount']}"),
+                                  _buildDetailRow("Received:",
+                                      "${bill!['recieved_money']}"),
+                                  _buildDetailRow("Change:",
+                                      "${bill?['bill_change'] ?? 'None'}"),
+                                ],
+                              )
+                            : const Text(
+                                "No bill found for this booking.",
+                                style: TextStyle(color: Colors.black54),
+                              )),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _photoTile(
+                    title: 'Receipt',
+                    url: beforeUrl,
+                    onCapture: _beforeImageandUpload,
+                  ),
+                  const SizedBox(height: 54),
+                ],
+              ),
             ),
-          ),
+
+            // Uploading overlay
+            if (uploading)
+              Container(
+                color: Colors.black26,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+          ],
         ),
       ),
     );
@@ -373,9 +403,8 @@ Widget _buildDetailRow(
   TextStyle? valueStyle,
 }) {
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    padding: const EdgeInsets.symmetric(vertical: 6.0),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
@@ -384,19 +413,20 @@ Widget _buildDetailRow(
             label,
             style: labelStyle ??
                 const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black54,
                 ),
           ),
         ),
+        const SizedBox(width: 8),
         Expanded(
           flex: 3,
           child: Text(
             value,
             style: valueStyle ??
                 const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   color: Colors.black87,
                 ),
             textAlign: TextAlign.right,
@@ -407,6 +437,48 @@ Widget _buildDetailRow(
   );
 }
 
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+  const _SectionCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: const [
+                    BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _SectionTitle({
+    required this.icon,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const [],
+    );
+  }
+}
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
   const FullScreenImage({super.key, required this.imageUrl});
@@ -418,13 +490,24 @@ class FullScreenImage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
       body: Center(
         child: InteractiveViewer(
-          child: Image.network(imageUrl, fit: BoxFit.contain),
+          panEnabled: true,
+          minScale: 0.5,
+          maxScale: 3.0,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.broken_image,
+              color: Colors.white70,
+              size: 48,
+            ),
+          ),
         ),
       ),
     );
   }
 }
-

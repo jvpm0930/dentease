@@ -115,7 +115,7 @@ class _DentistListPageState extends State<DentistListPage> {
                                               "Phone: ${dentist['phone'] ?? 'N/A'}"),
                                         ],
                                       ),
-                                      leading: const Icon(Icons.person),
+                                      leading: const Icon(Icons.person, color: const Color(0xFF103D7E) ,),
                                     ),
                                   );
                                 },

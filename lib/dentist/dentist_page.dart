@@ -64,41 +64,34 @@ class _DentistPageState extends State<DentistPage> {
     setState(() => isLoading = false);
   }
 
-  /// 🔹 Reusable Button Widget
   Widget _buildCustomButton({
-    required String title,
+    required String title, // kept for semantics/accessibility
     required VoidCallback onTap,
+    required ImageProvider backgroundImage,
+    EdgeInsetsGeometry margin = const EdgeInsets.only(bottom: 12),
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: margin,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          image: DecorationImage(
+            image: backgroundImage,
+            fit: BoxFit.cover, // same as NearbyClinicsButton
+          ),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+        child: Center(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.transparent, // same as NearbyClinicsButton
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
             ),
-            const Icon(Icons.chevron_right, color: Colors.black54),
-          ],
+          ),
         ),
       ),
     );
@@ -116,7 +109,8 @@ class _DentistPageState extends State<DentistPage> {
               const Center(child: CircularProgressIndicator())
             else if (clinicId != null)
               Positioned.fill(
-                top: 180,
+                top: 140,
+                bottom: 90,
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -126,40 +120,44 @@ class _DentistPageState extends State<DentistPage> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                ClinicPatientListPage(clinicId: clinicId!),
-                          ),
+                              builder: (context) =>
+                                  ClinicPatientListPage(clinicId: clinicId!)),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/patient.png'),
                       ),
                       _buildCustomButton(
                         title: "Clinic Dentists",
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                DentistListPage(clinicId: clinicId!),
-                          ),
+                              builder: (context) =>
+                                  DentistListPage(clinicId: clinicId!)),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/dentist.png'),
                       ),
                       _buildCustomButton(
                         title: "Clinic Staffs",
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                DentStaffListPage(clinicId: clinicId!),
-                          ),
+                              builder: (context) =>
+                                  DentStaffListPage(clinicId: clinicId!)),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/staff.png'),
                       ),
                       _buildCustomButton(
                         title: "Clinic Services",
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                DentistServListPage(clinicId: clinicId!),
-                          ),
+                              builder: (context) =>
+                                  DentistServListPage(clinicId: clinicId!)),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/services.png'),
                       ),
                       _buildCustomButton(
                         title: "Clinic Schedules",
@@ -172,28 +170,32 @@ class _DentistPageState extends State<DentistPage> {
                             ),
                           ),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/calendar.png'),
                       ),
                       _buildCustomButton(
                         title: "Clinic Details",
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                DentClinicPage(clinicId: clinicId!),
-                          ),
+                              builder: (context) =>
+                                  DentClinicPage(clinicId: clinicId!)),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/details.png'),
                       ),
                       _buildCustomButton(
                         title: "Clinic Analytics",
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                ClinicAnalytics(clinicId: clinicId!),
-                          ),
+                              builder: (context) =>
+                                  ClinicAnalytics(clinicId: clinicId!)),
                         ),
+                        backgroundImage:
+                            const AssetImage('assets/dentist/analysis.png'),
                       ),
-                      const SizedBox(height: 120), // add bottom padding
+                      const SizedBox(height: 120), 
                     ],
                   ),
                 ),

@@ -1,4 +1,3 @@
-
 import 'package:dentease/dentist/dentist_add_service.dart';
 import 'package:dentease/dentist/dentist_service_details.dart';
 import 'package:dentease/widgets/dentistWidgets/dentist_footer.dart';
@@ -18,6 +17,8 @@ class DentistServListPage extends StatefulWidget {
 
 class _DentistServListPageState extends State<DentistServListPage> {
   final supabase = Supabase.instance.client;
+  final Color kPrimary = const Color(0xFF103D7E);
+
   List<Map<String, dynamic>> services = [];
   String? dentistId;
   bool isLoading = true;
@@ -49,7 +50,7 @@ class _DentistServListPageState extends State<DentistServListPage> {
         });
       }
     } catch (e) {
-      print("Error fetching dentist ID: $e");
+      // ignore but keep UI responsive
     }
   }
 
@@ -77,12 +78,11 @@ class _DentistServListPageState extends State<DentistServListPage> {
 
   Future<void> _deleteService(String id) async {
     try {
-      // Step 1: Check if the service is linked to any bills
+      // Check if linked to any bills
       final billResponse =
           await supabase.from('bills').select('bill_id').eq('service_id', id);
 
       if (billResponse.isNotEmpty) {
-        // If linked, show an error message and stop
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -95,15 +95,12 @@ class _DentistServListPageState extends State<DentistServListPage> {
         return;
       }
 
-      // Step 2: If not linked, delete the service
       await supabase.from('services').delete().eq('service_id', id);
 
-      // Step 3: Update the local list
       setState(() {
         services.removeWhere((service) => service['service_id'] == id);
       });
 
-      // Step 4: Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Service deleted successfully!'),
@@ -111,7 +108,6 @@ class _DentistServListPageState extends State<DentistServListPage> {
         ),
       );
     } catch (e) {
-      // Handle unexpected errors
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error deleting service: $e'),
@@ -119,6 +115,10 @@ class _DentistServListPageState extends State<DentistServListPage> {
         ),
       );
     }
+  }
+
+  Future<void> _refresh() async {
+    await _fetchServices();
   }
 
   @override
@@ -129,95 +129,309 @@ class _DentistServListPageState extends State<DentistServListPage> {
         body: Stack(
           children: [
             const DentistHeader(),
-            Padding(
-              padding: const EdgeInsets.only(top: 150, bottom: 100),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  DentistAddService(clinicId: widget.clinicId),
+            Positioned.fill(
+              top: 150,
+              bottom: 100,
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => DentistAddService(
+                                        clinicId: widget.clinicId,
+                                      ),
+                                    ),
+                                  );
+                                  _fetchServices();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: kPrimary,
+                                  elevation: 3,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(color: kPrimary, width: 1),
+                                  ),
+                                ),
+                                icon: Icon(Icons.add, color: kPrimary),
+                                label: Text(
+                                  "Add New Services",
+                                  style: TextStyle(
+                                    color: kPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             ),
-                          );
-                          _fetchServices();
-                        },
-                        child: const Text(
-                          "Add New Services",
-                          style: TextStyle(
-                              color: Colors.blue),
+                            const SizedBox(height: 14),
+                            if (services.isEmpty)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: _EmptyState(primary: kPrimary),
+                              )
+                            else
+                              ListView.builder(
+                                physics: const NeverScrollableScrollPhysics(),
+                                shrinkWrap: true,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                itemCount: services.length,
+                                itemBuilder: (context, index) {
+                                  final s = services[index];
+                                  final status = (s['status'] ?? '').toString();
+                                  final statusColor =
+                                      status.toLowerCase() == 'inactive'
+                                          ? Colors.red
+                                          : kPrimary;
+
+                                  return _ServiceCard(
+                                    primary: kPrimary,
+                                    name:
+                                        (s['service_name'] ?? 'N/A').toString(),
+                                    price: (s['service_price'] ?? 'N/A')
+                                        .toString(),
+                                    status: status,
+                                    statusColor: statusColor,
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              DentistServiceDetailsPage(
+                                            serviceId:
+                                                s['service_id'].toString(),
+                                          ),
+                                        ),
+                                      );
+                                      _fetchServices();
+                                    },
+                                    onDelete: () =>
+                                        _deleteService(s['service_id']),
+                                  );
+                                },
+                              ),
+                            const SizedBox(height: 16),
+                          ],
                         ),
                       ),
                     ),
-                    ListView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: services.length,
-                      itemBuilder: (context, index) {
-                        final service = services[index];
-                        return Card(
-                          margin: const EdgeInsets.all(10),
-                          child: ListTile(
-                            title: Text(
-                              "Name: ${service['service_name'] ?? 'N/A'}"
-                                  .trim(),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                    "Price: ${service['service_price'] ?? 'N/A'}"
-                                        .trim()
-                              ),
-                                Text(
-                                  "Status: ${service['status']}",
-                                  style: TextStyle(
-                                    color: service['status'] == 'inactive'
-                                        ? Colors.red
-                                        : Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            leading: const Icon(Icons.medical_services),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () =>
-                                  _deleteService(service['service_id']),
-                            ),
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      DentistServiceDetailsPage(
-                                    serviceId: service['service_id'].toString(),
-                                  ),
-                                ),
-                              );
-                              _fetchServices();
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
             ),
-            if (dentistId != null) DentistFooter(clinicId: widget.clinicId, dentistId: dentistId!),
+            if (dentistId != null)
+              DentistFooter(
+                clinicId: widget.clinicId,
+                dentistId: dentistId!,
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final Color primary;
+  final String name;
+  final String price;
+  final String status;
+  final Color statusColor;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _ServiceCard({
+    required this.primary,
+    required this.name,
+    required this.price,
+    required this.status,
+    required this.statusColor,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: primary.withOpacity(0.1),
+                  foregroundColor: primary,
+                  child: const Icon(Icons.medical_services),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        // Chips row
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _InfoChip(
+                              icon: Icons.change_circle_outlined,
+                              label: price,
+                              bg: Colors.grey.shade100,
+                              fg: Colors.black87,
+                              border: Colors.grey.shade300,
+                            ),
+                            _InfoChip(
+                              icon: Icons.flag_rounded,
+                              label: status,
+                              bg: statusColor.withOpacity(0.12),
+                              fg: statusColor,
+                              border: statusColor.withOpacity(0.2),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  children: [
+                    IconButton(
+                      tooltip: 'Delete',
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: onDelete,
+                    ),
+                    const SizedBox(height: 6),
+                    const Icon(Icons.chevron_right, color: Colors.black45),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color bg;
+  final Color fg;
+  final Color border;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: fg),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final Color primary;
+  const _EmptyState({required this.primary});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: primary),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              "No services found for this clinic. Tap “Add New Services” to create one.",
+              style: TextStyle(color: Colors.black87),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -33,32 +33,38 @@ class ClinicChatPage extends StatefulWidget {
 class _ClinicChatPageState extends State<ClinicChatPage> {
   final supabase = Supabase.instance.client;
   final TextEditingController messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> messages = [];
-  Timer? refreshTimer;
   StreamSubscription<List<Map<String, dynamic>>>? _messageSubscription;
+
+  bool _autoScrollOnNewMessage = true;
+  bool _didInitialScroll = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Track if user is near bottom to decide autoscroll
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final threshold = 80.0;
+      final atBottom = _scrollController.position.pixels >=
+          (_scrollController.position.maxScrollExtent - threshold);
+      _autoScrollOnNewMessage = atBottom;
+    });
+
     _listenForMessages();
     fetchMessages();
-    startAutoRefresh();
-    markPatientMessagesAsRead(); // Mark unread messages as read upon opening
+    markPatientMessagesAsRead();
   }
 
   @override
   void dispose() {
     _messageSubscription?.cancel();
     messageController.dispose();
-    stopAutoRefresh();
+    _scrollController.dispose();
     super.dispose();
-  }
-
-  void startAutoRefresh() {
-    refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      fetchMessages();
-    });
   }
 
   Future<void> fetchMessages() async {
@@ -79,40 +85,53 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
       setState(() {
         messages = List<Map<String, dynamic>>.from(filtered);
       });
-    } catch (e) {
-      debugPrint('Error fetching messages');
-    }
+
+      // Initial jump to bottom after first load
+      if (!_didInitialScroll) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController
+                .jumpTo(_scrollController.position.maxScrollExtent);
+          }
+          _didInitialScroll = true;
+        });
+      }
+    } catch (_) {}
   }
 
-  int lastUnreadCount = 0;
-
   void _listenForMessages() {
-    _messageSubscription = supabase
-        .from('messages')
-        .stream(primaryKey: ['id']).listen((payload) async {
-      final relevantMessages = payload.where((m) =>
-          (m['sender_id'] == widget.patientId &&
-              m['receiver_id'] == widget.clinicId) ||
-          (m['sender_id'] == widget.clinicId &&
-              m['receiver_id'] == widget.patientId));
+    _messageSubscription =
+        supabase.from('messages').stream(primaryKey: ['id']).listen((payload) {
+      final relevantMessages = payload.where((msg) =>
+          (msg['sender_id'] == widget.patientId &&
+              msg['receiver_id'] == widget.clinicId) ||
+          (msg['sender_id'] == widget.clinicId &&
+              msg['receiver_id'] == widget.patientId));
 
       final List<Map<String, dynamic>> newMessages =
-          List<Map<String, dynamic>>.from(relevantMessages);
+          List<Map<String, dynamic>>.from(relevantMessages)
+            ..sort((a, b) =>
+                (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
 
       setState(() {
         messages = newMessages;
       });
 
-      // Update the unread count tracker
-      final unreadMessages = newMessages.where((msg) =>
-          msg['sender_id'] == widget.patientId &&
-          msg['receiver_id'] == widget.clinicId &&
-          (msg['is_read'] == false || msg['is_read'] == null));
-
-      lastUnreadCount = unreadMessages.length;
+      if (_autoScrollOnNewMessage) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
     });
   }
 
+  // For clinic view, mark patient's messages as read
   Future<void> markPatientMessagesAsRead() async {
     try {
       await supabase
@@ -121,9 +140,7 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
           .eq('sender_id', widget.patientId)
           .eq('receiver_id', widget.clinicId)
           .eq('is_read', false);
-    } catch (e) {
-      debugPrint('Error marking patient messages as read');
-    }
+    } catch (_) {}
   }
 
   Future<void> sendMessage(String text) async {
@@ -136,33 +153,24 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'is_read': false,
       });
-
       messageController.clear();
-      setState(() {
-        lastUnreadCount = 0;
-      });
-
-      await markPatientMessagesAsRead();
-    } catch (e) {
-      debugPrint("Error sending message");
-    }
-  }
-
-  void stopAutoRefresh() {
-    refreshTimer?.cancel();
-    refreshTimer = null;
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, List<Map<String, dynamic>>> groupedMessages = {};
+    const kPrimary = Color(0xFF103D7E);
+    const kBubbleMe = kPrimary;
+    final kBubbleOther = Colors.grey.shade200;
 
+    final Map<String, List<Map<String, dynamic>>> groupedMessages = {};
     for (var msg in messages) {
       final ts =
           msg['timestamp']?.toString() ?? DateTime.now().toIso8601String();
       final dateKey = _formatDate(ts);
       groupedMessages.putIfAbsent(dateKey, () => []).add(msg);
     }
+    final dates = groupedMessages.keys.toList();
 
     return BackgroundCont(
       child: Scaffold(
@@ -170,136 +178,211 @@ class _ClinicChatPageState extends State<ClinicChatPage> {
         appBar: AppBar(
           title: Text(
             "Chat with ${widget.patientName}",
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(top: 8),
-                itemCount: groupedMessages.length,
-                itemBuilder: (context, index) {
-                  final date = groupedMessages.keys.elementAt(index);
-                  final dayMessages = groupedMessages[date]!;
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 8, bottom: 12),
+                    itemCount: dates.length,
+                    itemBuilder: (context, index) {
+                      final date = dates[index];
+                      final dayMessages = groupedMessages[date]!;
 
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          date,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      ...dayMessages.map((msg) {
-                        final isMe = msg['sender_id'] == widget.clinicId;
-                        final text = msg['message'] ?? '';
-                        final ts = msg['timestamp'] ??
-                            DateTime.now().toIso8601String();
-                        final isUnread = (msg['is_read'] == false ||
-                                msg['is_read'] == null) &&
-                            !isMe;
-
-                        return Align(
-                          alignment: isMe
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                                vertical: 5, horizontal: 10),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isMe
-                                  ? Colors.blue[300]
-                                  : (isUnread
-                                      ? Colors.grey[200]
-                                      : Colors.grey[300]),
-                              borderRadius: BorderRadius.circular(12),
-                              border: isUnread
-                                  ? Border.all(
-                                      color: Colors.redAccent, width: 1)
-                                  : null,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  text,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: isMe ? Colors.white : Colors.black87,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Date chip
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Text(
+                                  date,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
                                   ),
                                 ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      _formatTimestamp(ts),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    if (isUnread) ...[
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "Unread",
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.redAccent,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ]
-                                  ],
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        );
-                      }),
-                    ],
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: messageController,
-                      decoration: InputDecoration(
-                        hintText: "Type a message...",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
+
+                          // Messages for the day
+                          ...dayMessages.map((msg) {
+                            final isMe = msg['sender_id'] == widget.clinicId;
+                            final text = msg['message'] ?? '';
+                            final ts = msg['timestamp'] ??
+                                DateTime.now().toIso8601String();
+                            final isUnread = (msg['is_read'] == false ||
+                                    msg['is_read'] == null) &&
+                                !isMe;
+
+                            final bgColor = isMe
+                                ? kBubbleMe
+                                : (isUnread
+                                    ? Colors.grey.shade100
+                                    : kBubbleOther);
+                            final textColor =
+                                isMe ? Colors.white : Colors.black87;
+
+                            return Align(
+                              alignment: isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.75,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: bgColor,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(14),
+                                    topRight: const Radius.circular(14),
+                                    bottomLeft: Radius.circular(isMe ? 14 : 4),
+                                    bottomRight: Radius.circular(isMe ? 4 : 14),
+                                  ),
+                                  border: isUnread && !isMe
+                                      ? Border.all(
+                                          color: Colors.redAccent, width: 1)
+                                      : null,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: isMe
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      text,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _formatTimestamp(ts),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isMe
+                                                ? Colors.white70
+                                                : const Color.fromARGB(
+                                                    255, 152, 152, 152),
+                                          ),
+                                        ),
+                                        if (isUnread) ...[
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            "Unread",
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isMe
+                                                  ? Colors.white70
+                                                  : Colors.redAccent,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ]
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+
+                // Input Bar
+                SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+                    color: Colors.transparent,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: messageController,
+                            minLines: 1,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              hintText: "Type a message...",
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(22),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(22),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                            ),
+                            onSubmitted: sendMessage,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                      ),
+                        const SizedBox(width: 8),
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: kPrimary,
+                          child: IconButton(
+                            onPressed: () =>
+                                sendMessage(messageController.text),
+                            icon: const Icon(Icons.send, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
-                    onPressed: () => sendMessage(messageController.text),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

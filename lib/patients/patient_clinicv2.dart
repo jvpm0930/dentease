@@ -234,7 +234,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                     Tab(text: 'Reviews'),
                                   ],
                                   labelColor: Colors.black,
-                                  indicatorColor: const Color(0xFF103D7E),
+                                  indicatorColor: Color(0xFF103D7E),
                                 ),
                               ),
                             ),
@@ -265,7 +265,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                     child: ListTile(
                                       leading: const Icon(
                                           Icons.medical_services,
-                                          color: const Color(0xFF103D7E)),
+                                          color: Color(0xFF103D7E)),
                                       title: Text(service['service_name'], style: TextStyle(
                                         fontWeight: FontWeight.bold
                                       ),),
@@ -309,7 +309,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                                         ),
                                       ).then((_) => _fetchClinicDetails());
                                     },
-                                    icon: const Icon(Icons.feedback, color: const Color(0xFF103D7E)),
+                                    icon: const Icon(Icons.feedback, color: Color(0xFF103D7E)),
                                     label: const Text("Add Review", style: TextStyle(
                                       color: Color(0xFF103D7E),
                                       fontWeight: FontWeight.bold,

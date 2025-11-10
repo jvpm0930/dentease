@@ -21,6 +21,8 @@ class EditClinicDetails extends StatefulWidget {
 
 class _EditClinicDetailsState extends State<EditClinicDetails> {
   final supabase = Supabase.instance.client;
+  static const Color kPrimary = Color(0xFF103D7E);
+
   late TextEditingController clinicNameController;
   late TextEditingController phoneController;
   late TextEditingController addressController;
@@ -28,10 +30,13 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
 
   double? latitude;
   double? longitude;
-  File? licenseImage; // Store picked image as File
-  String? licenseUrl; // Store license URL from storage
+
+  File? licenseImage;
+  String? licenseUrl;
+
   File? permitImage;
   String? permitUrl;
+
   File? officeImage;
   String? officeUrl;
 
@@ -46,18 +51,15 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
         TextEditingController(text: widget.clinicDetails['address']);
     infoController = TextEditingController(text: widget.clinicDetails['info']);
 
-    latitude = widget.clinicDetails['latitude'];
-    longitude = widget.clinicDetails['longitude'];
-    licenseUrl =
-        widget.clinicDetails['license_url']; // Load existing license URL
+    latitude = (widget.clinicDetails['latitude'] as num?)?.toDouble();
+    longitude = (widget.clinicDetails['longitude'] as num?)?.toDouble();
+    licenseUrl = widget.clinicDetails['license_url'];
     permitUrl = widget.clinicDetails['permit_url'];
     officeUrl = widget.clinicDetails['office_url'];
   }
 
-  /// Update clinic details in Supabase
   Future<void> _updateClinicDetails() async {
     try {
-      //  Prepare data to update
       final updateData = {
         'clinic_name': clinicNameController.text,
         'phone': phoneController.text,
@@ -65,32 +67,29 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
         'info': infoController.text,
         'latitude': latitude,
         'longitude': longitude,
-        if (licenseUrl != null)
-          'license_url': licenseUrl,
+        if (licenseUrl != null) 'license_url': licenseUrl,
         if (permitUrl != null) 'permit_url': permitUrl,
         if (officeUrl != null) 'office_url': officeUrl,
       };
 
-
-      //  Update clinic details in Supabase
       await supabase
           .from('clinics')
           .update(updateData)
           .eq('clinic_id', widget.clinicId);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Clinic details updated successfully!')),
       );
-
-      Navigator.pop(context, true); // Return true to refresh data
+      Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating clinic details: $e')),
       );
     }
   }
 
-  /// Open Map to pick a location
   Future<void> _pickLocation() async {
     final result = await Navigator.push(
       context,
@@ -120,7 +119,6 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
     try {
       final filePath = '$folder/$fileName';
 
-      // Delete old file if exists
       if (oldUrl != null && oldUrl.isNotEmpty) {
         final oldFilePath = oldUrl.split('/$folder/').last;
         if (oldFilePath != fileName) {
@@ -128,13 +126,12 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
         }
       }
 
-      // Upload with upsert
       await supabase.storage.from(folder).upload(filePath, image,
           fileOptions: const FileOptions(upsert: true));
 
-      // Return public URL
       return supabase.storage.from(folder).getPublicUrl(filePath);
     } catch (e) {
+      if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error uploading image: $e')),
       );
@@ -143,72 +140,70 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
   }
 
   Future<void> _pickLicenseImage() async {
-    final ImagePicker picker = ImagePicker();
+    final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       setState(() => licenseImage = File(image.path));
-
       licenseUrl = await _uploadImage(
         image: licenseImage!,
         folder: 'licenses',
         fileName: '${widget.clinicId}_license.jpg',
         oldUrl: licenseUrl,
       );
-
+      if (!mounted) return;
       if (licenseUrl != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('License image uploaded!')),
         );
       }
+      setState(() {}); // refresh preview
     }
   }
 
   Future<void> _pickPermitImage() async {
-    final ImagePicker picker = ImagePicker();
+    final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       setState(() => permitImage = File(image.path));
-
       permitUrl = await _uploadImage(
         image: permitImage!,
         folder: 'permits',
         fileName: '${widget.clinicId}_permit.jpg',
         oldUrl: permitUrl,
       );
-
+      if (!mounted) return;
       if (permitUrl != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Permit image uploaded!')),
         );
       }
+      setState(() {});
     }
   }
 
   Future<void> _pickOfficeImage() async {
-    final ImagePicker picker = ImagePicker();
+    final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       setState(() => officeImage = File(image.path));
-
       officeUrl = await _uploadImage(
         image: officeImage!,
         folder: 'offices',
         fileName: '${widget.clinicId}_office.jpg',
         oldUrl: officeUrl,
       );
-
+      if (!mounted) return;
       if (officeUrl != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Office image uploaded!')),
         );
       }
+      setState(() {});
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -225,127 +220,313 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-                _buildTextField('Clinic Name', clinicNameController),
-                _buildTextField('Phone', phoneController),
-
-                // Address TextField + Pick Location Button
-                TextField(
-                  controller: addressController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Address',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.location_on),
-                      onPressed: _pickLocation,
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Basic Info
+              _SectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionTitle(
+                      icon: Icons.apartment_rounded,
+                      title: 'Basic Information',
                     ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      'Clinic Name',
+                      clinicNameController,
+                      icon: Icons.badge_outlined,
                     ),
-                  ),
+                    _buildTextField(
+                      'Phone',
+                      phoneController,
+                      icon: Icons.call_outlined,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 6),
+                    // Address + Pick location
+                    TextField(
+                      controller: addressController,
+                      readOnly: true,
+                      decoration: _inputDecoration(
+                        label: 'Address',
+                        icon: Icons.place_outlined,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.location_searching),
+                          onPressed: _pickLocation,
+                          tooltip: 'Pick on Map',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (latitude != null && longitude != null)
+                      Text(
+                        'Lat: ${latitude!.toStringAsFixed(5)}  |  Lng: ${longitude!.toStringAsFixed(5)}',
+                        style: const TextStyle(
+                            color: Colors.black54, fontSize: 12),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 15),
-                // Pick License Image Button
-                ElevatedButton.icon(
-                  onPressed: _pickLicenseImage,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text(
-                    'Pick License Image',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
+              ),
+              const SizedBox(height: 14),
+
+              // Documents
+              _SectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionTitle(
+                      icon: Icons.assignment_turned_in_rounded,
+                      title: 'Credentials & Documents',
+                    ),
+                    const SizedBox(height: 12),
+                    // License
+                    _DocRow(
+                      title: 'PRC License',
+                      onPick: _pickLicenseImage,
+                      preview: _buildPreview(licenseImage, licenseUrl),
+                    ),
+                    const SizedBox(height: 12),
+                    // Permit
+                    _DocRow(
+                      title: 'DTI Permit',
+                      onPick: _pickPermitImage,
+                      preview: _buildPreview(permitImage, permitUrl),
+                    ),
+                    const SizedBox(height: 12),
+                    // Office
+                    _DocRow(
+                      title: 'Workplace',
+                      onPick: _pickOfficeImage,
+                      preview: _buildPreview(officeImage, officeUrl),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Recommended: Square image • JPG/PNG • up to ~2MB",
+                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 15),
+              ),
+              const SizedBox(height: 14),
 
-                ElevatedButton.icon(
-                  onPressed: _pickPermitImage,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text(
-                    'Pick Permit Image',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
+              // About/Info
+              _SectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionTitle(
+                      icon: Icons.notes_rounded,
+                      title: 'Clinic Info',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildTextField(
+                      'Clinic Info',
+                      infoController,
+                      maxLines: 6,
+                      icon: Icons.description_outlined,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 15),
+              ),
+              const SizedBox(height: 18),
 
-                ElevatedButton.icon(
-                  onPressed: _pickOfficeImage,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text(
-                    'Pick Office Image',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-                const SizedBox(height: 15),
-
-                _buildTextField('Clinic Info', infoController, maxLines: 8),
-                const SizedBox(height: 20),
-
-                // Save Changes Button
-                ElevatedButton(
+              // Save button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
                   onPressed: _updateClinicDetails,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                    backgroundColor: kPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
                   ),
                   child: const Text(
                     'Save Changes',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+            ],
           ),
         ),
       ),
     );
   }
 
-  /// Helper to create a TextField with consistent styling
-  Widget _buildTextField(String label, TextEditingController controller,
-      {int maxLines = 1}) {
+  // Reusable preview builder for file/url
+  Widget _buildPreview(File? file, String? url) {
+    final border = BorderRadius.circular(10);
+    return ClipRRect(
+      borderRadius: border,
+      child: Container(
+        width: double.infinity,
+        height: 140,
+        color: Colors.grey.shade100,
+        child: file != null
+            ? Image.file(file, fit: BoxFit.cover)
+            : (url != null && url.isNotEmpty)
+                ? Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _emptyPreview(),
+                  )
+                : _emptyPreview(),
+      ),
+    );
+  }
+
+  Widget _emptyPreview() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.image_not_supported_outlined, color: Colors.black38),
+          SizedBox(height: 4),
+          Text('No image', style: TextStyle(color: Colors.black45)),
+        ],
+      ),
+    );
+  }
+
+  // Styled text field
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    IconData? icon,
+    TextInputType? keyboardType,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
-        keyboardType:
-            maxLines == 1 ? TextInputType.text : TextInputType.multiline,
+        keyboardType: keyboardType ??
+            (maxLines == 1 ? TextInputType.text : TextInputType.multiline),
         maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+        decoration: _inputDecoration(label: label, icon: icon),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({required String label, IconData? icon}) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.white,
+      prefixIcon: icon != null ? Icon(icon, color: kPrimary) : null,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+  const _SectionCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.98),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _SectionTitle({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF103D7E);
+    return Row(
+      children: [
+        Icon(icon, color: color),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
-      ),
+      ],
+    );
+  }
+}
+
+class _DocRow extends StatelessWidget {
+  final String title;
+  final VoidCallback onPick;
+  final Widget preview;
+
+  const _DocRow({
+    required this.title,
+    required this.onPick,
+    required this.preview,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const kPrimary = Color(0xFF103D7E);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+              fontWeight: FontWeight.w700, color: Colors.black87),
+        ),
+        const SizedBox(height: 8),
+        preview,
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            onPressed: onPick,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Change'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: kPrimary,
+              side: const BorderSide(color: kPrimary),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

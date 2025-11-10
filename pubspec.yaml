@@ -62,6 +62,13 @@ flutter:
     - assets/labels.txt
     - assets/apk-logo.png
     - assets/nearby.png
+    - assets/dentist/dentist.png
+    - assets/dentist/analysis.png
+    - assets/dentist/calendar.png
+    - assets/dentist/details.png
+    - assets/dentist/patient.png
+    - assets/dentist/services.png
+    - assets/dentist/staff.png
 
 flutter_icons:
   android: true

@@ -108,8 +108,8 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       final detectedLabel = _cleanLabel(detectedLabelRaw); // <-- sanitize
       final detectedConfidence = (result['confidence'] * 100);
 
-      // Relax threshold to 60%
-      const minConfidence = 60.0;
+      // Relax threshold to 90%
+      const minConfidence = 90.0;
 
       if (validDiseases
               .map((e) => e.toLowerCase())
@@ -122,7 +122,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         await _fetchDiseaseDescription(detectedLabel);
       } else {
         setState(() {
-          label = "Not an Oral Problem";
+          label = "No Oral Problems Detected";
           confidence = detectedConfidence;
           diseaseDescription =
               "Try again with a clearer image or better lighting.";
@@ -215,7 +215,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                             height: 300,
                             width: 300,
                             decoration: BoxDecoration(
-                              color: Colors.blueAccent,
+                              color: const Color(0xFF103D7E),
                               borderRadius: BorderRadius.circular(12),
                               image: filePath == null
                                   ? const DecorationImage(
@@ -233,7 +233,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                             child: Column(
                               children: [
                                 Text(
-                                  "Result: $label",
+                                  "Scan Result: $label",
                                   style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold),
@@ -300,7 +300,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                                         child: ListTile(
                                           leading: const Icon(
                                             Icons.medical_services,
-                                            color: Colors.blueAccent,
+                                            color: Color(0xFF103D7E),
                                           ),
                                           title: Text(service['service_name']),
                                           subtitle: Text(
@@ -336,7 +336,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               margin: const EdgeInsets.all(20),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.blueAccent,
+                color: const Color(0xFF103D7E),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Row(

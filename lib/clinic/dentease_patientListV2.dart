@@ -55,7 +55,7 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
       appBar: AppBar(
         title: const Text(
           "All Booked Appointments",
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent, // Transparent AppBar
@@ -109,14 +109,14 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: booking['status'] == 'approved'
-                                      ? Colors.blueAccent
+                                      ? const Color(0xFF103D7E)
                                       : booking['status'] == 'pending'
                                           ? Colors.black
                                           : (booking['status'] == 'rejected' ||
                                                   booking['status'] ==
                                                       'cancelled')
                                               ? Colors.red
-                                              : Colors.grey, // default fallback
+                                              : Colors.green, // default fallback
                                 ),
                               ),
                             ],
@@ -135,7 +135,7 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
                             },
                             child: const Padding(
                               padding: EdgeInsets.only(right: 10),
-                              child: Icon(Icons.info, color: Colors.blue),
+                              child: Icon(Icons.info, color: const Color(0xFF103D7E)),
                             ),
                           ),
                         ),

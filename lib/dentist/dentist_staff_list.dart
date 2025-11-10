@@ -54,7 +54,7 @@ class _DentStaffListPageState extends State<DentStaffListPage> {
     }
   }
 
-  /// 🔹 Fetch staff members from `staffs` table
+  /// Fetch staff members from `staffs` table
   Future<void> _fetchStaff() async {
     try {
       final response = await supabase
@@ -102,10 +102,11 @@ class _DentStaffListPageState extends State<DentStaffListPage> {
                       },
                       child: const Text(
                         "Add New Staff",
-                        style: TextStyle(color: Colors.blue),
+                        style: TextStyle(color: const Color(0xFF103D7E)),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
                   Expanded(
                     child: isLoading
                         ? const Center(child: CircularProgressIndicator())
@@ -136,7 +137,7 @@ class _DentStaffListPageState extends State<DentStaffListPage> {
                                               "Phone: ${staff['phone'] ?? 'N/A'}"),
                                         ],
                                       ),
-                                      leading: const Icon(Icons.person),
+                                      leading: const Icon(Icons.person, color: const Color(0xFF103D7E),),
                                     ),
                                   );
                                 },

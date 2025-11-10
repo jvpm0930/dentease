@@ -228,8 +228,8 @@ Widget _segButton({
 }) {
   const activeBg = Color(0xFF103D7E);
   const activeFg = Colors.white;
-  final inactiveBg = const Color.fromARGB(0, 255, 255, 255)!;
-  final inactiveFg = const Color.fromARGB(74, 0, 0, 0)!;
+  final inactiveBg = const Color.fromARGB(0, 255, 255, 255);
+  final inactiveFg = const Color.fromARGB(74, 0, 0, 0);
 
   return ElevatedButton(
     onPressed: isActive ? null : onPressed,

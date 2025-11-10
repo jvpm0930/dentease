@@ -274,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: "Sign up",
                           style: TextStyle(
-                            color: const Color(0xFF103D7E),
+                            color: Color(0xFF103D7E),
                             fontWeight: FontWeight.bold,
                           ),
                         ),

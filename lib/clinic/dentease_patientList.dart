@@ -67,7 +67,7 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
         appBar: AppBar(
           title: const Text(
             "Patient List",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent, // Transparent AppBar
@@ -130,7 +130,9 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
                                               "Phone: ${patient['phone'] ?? 'N/A'}"),
                                         ], 
                                       ),
-                                      leading: const Icon(Icons.person),
+                                      leading: const Icon(Icons.person, 
+                                          color: Color(0xFF103D7E),
+                                          ),
                                       trailing: GestureDetector(
                                         onTap: () {
                                           Navigator.push(
@@ -148,7 +150,7 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
                                         child: const Padding(
                                           padding: EdgeInsets.only(right: 10),
                                           child: Icon(Icons.info,
-                                              color: Colors.blue),
+                                              color: const Color(0xFF103D7E)),
                                         ),
                                       ),
 

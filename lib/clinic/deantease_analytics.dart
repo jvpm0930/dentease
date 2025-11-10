@@ -216,8 +216,9 @@ class _ClinicAnalyticsState extends State<ClinicAnalytics> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text("Clinic Dashboard",
+          title: const Text("Clinic Analytics",
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          foregroundColor: Colors.white,
           backgroundColor: Colors.transparent,
           centerTitle: true,
         ),
