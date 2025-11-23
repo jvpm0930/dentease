@@ -4,12 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DentistClinicSchedPage extends StatefulWidget {
-  final String dentistId;
   final String clinicId;
 
   const DentistClinicSchedPage({
     super.key,
-    required this.dentistId,
     required this.clinicId,
   });
 
@@ -59,7 +57,6 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
       final response = await supabase
           .from('clinics_sched')
           .select()
-          .eq('dentist_id', widget.dentistId)
           .eq('clinic_id', widget.clinicId)
           .order('date', ascending: true)
           .order('start_time', ascending: true);
@@ -96,7 +93,6 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
       final existing = await supabase
           .from('clinics_sched')
           .select()
-          .eq('dentist_id', widget.dentistId)
           .eq('clinic_id', widget.clinicId)
           .eq('date', formattedDate)
           .eq('start_time', startHour)
@@ -115,7 +111,6 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
       }
 
       final newSchedule = {
-        'dentist_id': widget.dentistId,
         'clinic_id': widget.clinicId,
         'date': formattedDate,
         'start_time': startHour,
@@ -208,7 +203,7 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
         appBar: AppBar(
           title: const Text(
             "Manage Schedule",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Colors.white),

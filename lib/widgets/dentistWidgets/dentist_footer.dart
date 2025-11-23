@@ -68,24 +68,29 @@ class _DentistFooterState extends State<DentistFooter> {
 
   bool hasUnreadMessages = false;
   bool hasNewBookings = false;
+  bool hasNewSupports = false;
   Timer? refreshTimer;
 
   String? lastNotifiedMessageId;
   String? lastNotifiedBookingId;
+  String? lastNotifiedSupportId;
 
   final Set<String> notifiedBookingIds = {};
   final Set<String> notifiedMessageIds = {};
+  final Set<String> notifiedSupportIds = {};
 
 
   @override
   void initState() {
     super.initState();
     initNotifications();
-    fetchUnreadMessages();
     loadNotifiedIds();
     notifiedMessageIds.clear();
+    fetchUnreadMessages();
     notifiedBookingIds.clear();
     fetchNewBookings();
+    notifiedSupportIds.clear();
+    fetchNewSupports();
     startAutoRefresh();
   }
 
@@ -99,6 +104,7 @@ class _DentistFooterState extends State<DentistFooter> {
     refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       fetchUnreadMessages();
       fetchNewBookings();
+      fetchNewSupports();
     });
   }
 
@@ -111,10 +117,12 @@ class _DentistFooterState extends State<DentistFooter> {
     final prefs = await SharedPreferences.getInstance();
     final notifiedBookings = prefs.getStringList('notifiedBookingIds') ?? [];
     final notifiedMessages = prefs.getStringList('notifiedMessageIds') ?? [];
+    final notifiedSupports = prefs.getStringList('notifiedSupportIds') ?? [];
 
     setState(() {
       notifiedBookingIds.addAll(notifiedBookings);
       notifiedMessageIds.addAll(notifiedMessages);
+      notifiedSupportIds.addAll(notifiedSupports);
     });
   }
 
@@ -124,6 +132,50 @@ class _DentistFooterState extends State<DentistFooter> {
         'notifiedBookingIds', notifiedBookingIds.toList());
     await prefs.setStringList(
         'notifiedMessageIds', notifiedMessageIds.toList());
+    await prefs.setStringList(
+        'notifiedSupportIds', notifiedSupportIds.toList());
+  }
+
+  Future<void> fetchNewSupports() async {
+    try {
+      final response = await supabase
+          .from('supports')
+          .select('support_id, message, sender_id')
+          .eq('receiver_id', widget.clinicId)
+          .or('is_read.eq.false,is_read.eq.FALSE,is_read.is.null')
+          .order('timestamp', ascending: true);
+
+      if (response.isNotEmpty) {
+        setState(() => hasNewSupports = true);
+
+        //  Load saved notified message IDs (persistent)
+        final prefs = await SharedPreferences.getInstance();
+        final savedIds = prefs.getStringList('notifiedSupportIds') ?? [];
+        final notifiedSupportIds = savedIds.toSet();
+
+        for (var msg in response) {
+          final supportId = msg['support_id'].toString();
+
+          // Only notify if not already notified
+          if (!notifiedSupportIds.contains(supportId)) {
+            notifiedSupportIds.add(supportId);
+
+            // Save updated set persistently
+            await prefs.setStringList(
+                'notifiedSupportIds', notifiedSupportIds.toList());
+
+            await showLocalNotification(
+              'New message from Support',
+              msg['message'] ?? 'Sent you a message',
+            );
+          }
+        }
+      } else {
+        setState(() => hasNewSupports = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching supports messages');
+    }
   }
 
   Future<void> fetchUnreadMessages() async {
@@ -211,11 +263,9 @@ class _DentistFooterState extends State<DentistFooter> {
                 '${patientData?['firstname'] ?? ''} ${patientData?['lastname'] ?? ''}'
                     .trim();
 
-            final bookingDate = booking['date'] ?? 'Unknown date';
-
             await showLocalNotification(
               'New Pending Booking',
-              'From $patientName on $bookingDate',
+              'From $patientName',
             );
           }
         }
@@ -267,7 +317,6 @@ class _DentistFooterState extends State<DentistFooter> {
                   context,
                   DentistBookingPendPage(
                     clinicId: widget.clinicId,
-                    dentistId: widget.dentistId,
                   ),
                 ),
                 if (hasNewBookings)
@@ -323,14 +372,44 @@ class _DentistFooterState extends State<DentistFooter> {
                 );
               },
             ),
-
-            _buildNavImage(
-              'assets/icons/customer-service.png',
-              context,
-              ClinicChatPageforAdmin(
-                clinicId: widget.clinicId,
-                adminId: 'eee5f574-903b-4575-a9d9-2f69e58f1801',
+            IconButton(
+              iconSize: 35,
+              icon: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    'assets/icons/customer-service.png',
+                    width: 32,
+                    height: 32,
+                    color: Colors.white,
+                  ),
+                  if (hasNewSupports)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ClinicChatPageforAdmin(
+                        clinicId: widget.clinicId,
+                        adminId: 'eee5f574-903b-4575-a9d9-2f69e58f1801',
+                      ),
+                  ),
+                );
+              },
             ),
             _buildNavImage(
               'assets/icons/profile.png',

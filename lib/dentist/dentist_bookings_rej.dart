@@ -12,11 +12,9 @@ String formatDateTime(String dateTime) {
 }
 
 class DentistBookingRejPage extends StatefulWidget {
-  final String dentistId;
   final String clinicId;
   const DentistBookingRejPage({
     super.key,
-    required this.dentistId,
     required this.clinicId,
   });
 
@@ -95,7 +93,6 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                           context,
                           _fadeRoute(DentistBookingApprvPage(
                             clinicId: widget.clinicId,
-                            dentistId: widget.dentistId,
                           )),
                         );
                       },
@@ -111,7 +108,6 @@ class _DentistBookingRejPageState extends State<DentistBookingRejPage> {
                           context,
                           _fadeRoute(DentistBookingPendPage(
                             clinicId: widget.clinicId,
-                            dentistId: widget.dentistId,
                           )),
                         );
                       },

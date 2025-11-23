@@ -1,5 +1,5 @@
-import 'package:dentease/staff/staff_clinic_services.dart';
-import 'package:dentease/staff/staff_clinics_sched.dart';
+import 'package:dentease/dentist/dentist_clinic_sched.dart';
+import 'package:dentease/dentist/dentist_clinic_services.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:dentease/widgets/staffWidgets/staff_footer.dart';
 import 'package:dentease/widgets/staffWidgets/staff_header.dart';
@@ -32,19 +32,17 @@ class _StaffPageState extends State<StaffPage> {
     final user = supabase.auth.currentUser;
 
     if (user == null || user.email == null) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       return;
     }
 
-    userEmail = user.email; // Ensure userEmail is assigned
+    userEmail = user.email;
 
     try {
       final response = await supabase
           .from('staffs')
           .select('clinic_id, staff_id')
-          .eq('email', userEmail!) // Ensure userEmail is not null
+          .eq('email', userEmail!)
           .maybeSingle();
 
       if (response != null && response['clinic_id'] != null) {
@@ -54,47 +52,42 @@ class _StaffPageState extends State<StaffPage> {
         });
       }
     } catch (error) {
-      print("Error fetching clinic ID: $error");
+      debugPrint("Error fetching clinic ID: $error");
     }
 
-    setState(() {
-      isLoading = false;
-    });
+    setState(() => isLoading = false);
   }
 
-  /// 🔹 **Reusable Custom Button**
-  Widget _buildCustomButton(
-      {required String title, required VoidCallback onTap}) {
+  // Same image-based button style as DentistPage
+  Widget _buildCustomButton({
+    required String title,
+    required VoidCallback onTap,
+    required ImageProvider backgroundImage,
+    EdgeInsetsGeometry margin = const EdgeInsets.only(bottom: 12),
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: margin,
         decoration: BoxDecoration(
-          color: Colors.grey[100], // Light background
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          image: DecorationImage(
+            image: backgroundImage,
+            fit: BoxFit.cover,
+          ),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+        child: const Center(
+          child: Text(
+            // Text transparent to match the DentistPage (title baked into image)
+            '',
+            style: TextStyle(
+              color: Colors.transparent,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            const Icon(Icons.chevron_right, color: Colors.black54),
-          ],
+          ),
         ),
       ),
     );
@@ -111,40 +104,45 @@ class _StaffPageState extends State<StaffPage> {
             if (isLoading)
               const Center(child: CircularProgressIndicator())
             else if (clinicId != null)
-              Positioned(
-                top: 180,
-                left: 20,
-                right: 20,
-                child: Column(
-                  children: [
-                    _buildCustomButton(
-                      title: "Clinic Services",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                StaffServListPage(clinicId: clinicId!),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildCustomButton(
-                      title: "Clinic Schedules",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                StaffClinicSchedPage(
-                              clinicId: widget.clinicId,
-                              staffId: widget.staffId,
+              Positioned.fill(
+                top: 140,
+                bottom: 90,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      _buildCustomButton(
+                        title: "Clinic Services",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  DentistServListPage(clinicId: clinicId!),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                          );
+                        },
+                        backgroundImage:
+                            const AssetImage('assets/dentist/services.png'),
+                      ),
+                      _buildCustomButton(
+                        title: "Clinic Schedules",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DentistClinicSchedPage(
+                                clinicId: widget.clinicId,
+                              ),
+                            ),
+                          );
+                        },
+                        backgroundImage:
+                            const AssetImage('assets/dentist/calendar.png'),
+                      ),
+                      const SizedBox(height: 120),
+                    ],
+                  ),
                 ),
               ),
             if (staffId != null)

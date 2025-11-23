@@ -213,7 +213,7 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
         appBar: AppBar(
           title: const Text(
             "Edit Clinic Details",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,

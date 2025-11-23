@@ -20,8 +20,12 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
   final TextEditingController firstnameController = TextEditingController();
   final TextEditingController lastnameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+
   String? profileUrl;
   bool isLoading = true;
+
+  // UI constants to match PatientProfile styling
+  static const kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -44,11 +48,14 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
         profileUrl = response['profile_url'];
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error fetching dentist details: $e')),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -57,16 +64,18 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
 
     try {
       await supabase.from('dentists').update({
-        'firstname': firstnameController.text,
-        'lastname': lastnameController.text,
-        'phone': phoneController.text,
+        'firstname': firstnameController.text.trim(),
+        'lastname': lastnameController.text.trim(),
+        'phone': phoneController.text.trim(),
       }).eq('dentist_id', widget.dentistId);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Dentist details updated successfully!')),
       );
       Navigator.pop(context, true); // refresh parent screen
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating dentist details: $e')),
       );
@@ -83,7 +92,11 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
     final filePath = 'dentist-profile/$fileName';
 
     try {
-      await supabase.storage.from('dentist-profile').remove([filePath]);
+      // Remove previous if exists (ignore error if not found)
+      await supabase.storage
+          .from('dentist-profile')
+          .remove([filePath]).catchError((_) {});
+
       await supabase.storage.from('dentist-profile').upload(
             filePath,
             file,
@@ -93,19 +106,20 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
       final publicUrl =
           supabase.storage.from('dentist-profile').getPublicUrl(filePath);
 
-      await supabase.from('dentists').update({
-        'profile_url': publicUrl,
-      }).eq('dentist_id', widget.dentistId);
+      await supabase.from('dentists').update({'profile_url': publicUrl}).eq(
+          'dentist_id', widget.dentistId);
 
       setState(() {
         profileUrl =
             '$publicUrl?timestamp=${DateTime.now().millisecondsSinceEpoch}';
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile picture updated!')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error uploading image: $e')),
       );
@@ -120,7 +134,10 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
         appBar: AppBar(
           title: const Text(
             "Edit Profile",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -130,36 +147,59 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
+                physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Profile Picture with tap to upload
-                      GestureDetector(
-                        onTap: _pickAndUploadImage,
-                        child: CircleAvatar(
-                          radius: 80,
-                          backgroundColor: Colors.grey[300],
-                          backgroundImage: profileUrl != null &&
-                                  profileUrl!.isNotEmpty
-                              ? NetworkImage(profileUrl!)
-                              : const AssetImage('assets/default_profile.png')
-                                  as ImageProvider,
-                          child: profileUrl == null || profileUrl!.isEmpty
-                              ? const Icon(Icons.camera_alt,
-                                  size: 40, color: Colors.grey)
-                              : null,
+                      const SizedBox(height: 8),
+
+                      // Avatar with camera chip (tap to change)
+                      Center(
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                              child: CircleAvatar(
+                                radius: 76,
+                                backgroundColor: Colors.grey[200],
+                                backgroundImage:
+                                    profileUrl != null && profileUrl!.isNotEmpty
+                                        ? NetworkImage(profileUrl!)
+                                        : const AssetImage('assets/profile.png')
+                                            as ImageProvider,
+                              ),
+                            ),
+                            // Camera chip
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(22),
+                                onTap: _pickAndUploadImage,
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: kPrimary,
+                                  ),
+                                  padding: const EdgeInsets.all(10),
+                                  child: const Icon(Icons.camera_alt,
+                                      color: Colors.white, size: 20),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "UPDATE PROFILE PICTURE",
-                        style: TextStyle(color: Colors.white, fontSize: 18),
-                      ),
-                      const SizedBox(height: 30),
 
-                      // Editable TextFields
+                      const SizedBox(height: 24),
+
+                      // Editable fields styled like PatientProfile tiles
                       _buildInputField(
                         controller: firstnameController,
                         label: 'Firstname',
@@ -179,7 +219,7 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
                         keyboardType: TextInputType.phone,
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 24),
 
                       // Save Button
                       SizedBox(
@@ -190,16 +230,21 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
                           label: const Text(
                             'Save Changes',
                             style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: kPrimary,
                             padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 20),
+                              vertical: 14,
+                              horizontal: 20,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
+                            elevation: 2,
+                            shadowColor: Colors.black26,
                           ),
                         ),
                       ),
@@ -211,7 +256,7 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
     );
   }
 
-  /// Styled input field for consistent look
+  /// Styled input field matching PatientProfile look-and-feel
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
@@ -219,22 +264,35 @@ class _DentistProfUpdateState extends State<DentistProfUpdate> {
     String? validatorMsg,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
       child: TextFormField(
         controller: controller,
         validator: validatorMsg != null
-            ? (value) => value!.isEmpty ? validatorMsg : null
+            ? (value) =>
+                value == null || value.trim().isEmpty ? validatorMsg : null
             : null,
         keyboardType: keyboardType,
+        style: const TextStyle(fontSize: 16, color: Colors.black87),
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: Colors.blueAccent),
+          labelStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: Icon(icon, color: kPrimary),
           filled: true,
-          fillColor: Colors.grey[200],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: kPrimary, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.redAccent),
           ),
         ),
       ),

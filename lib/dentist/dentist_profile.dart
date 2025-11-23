@@ -37,6 +37,7 @@ class _DentistProfileState extends State<DentistProfile> {
         dentistDetails = response;
         final url = response['profile_url'];
         if (url != null && url.isNotEmpty) {
+          // Cache-buster
           profileUrl =
               '$url?timestamp=${DateTime.now().millisecondsSinceEpoch}';
         } else {
@@ -45,9 +46,11 @@ class _DentistProfileState extends State<DentistProfile> {
         isLoading = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching dentist details: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching dentist details: $e')),
+        );
+      }
       setState(() => isLoading = false);
     }
   }
@@ -74,6 +77,7 @@ class _DentistProfileState extends State<DentistProfile> {
       if (confirm == true) {
         await Supabase.instance.client.auth.signOut();
 
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -81,10 +85,66 @@ class _DentistProfileState extends State<DentistProfile> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logout failed: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logout failed: $e')),
+        );
+      }
     }
+  }
+
+  // Match PatientProfile UI
+  Widget _buildProfilePicture() {
+    return CircleAvatar(
+      radius: 80,
+      backgroundColor: Colors.grey[300],
+      backgroundImage: profileUrl != null && profileUrl!.isNotEmpty
+          ? NetworkImage(profileUrl!)
+          : const AssetImage('assets/profile.png') as ImageProvider,
+    );
+  }
+
+  // Match PatientProfile UI
+  Widget _buildInfoTile(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF103D7E)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14, color: Colors.grey, height: 1.3)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : 'N/A',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -95,7 +155,10 @@ class _DentistProfileState extends State<DentistProfile> {
         appBar: AppBar(
           title: const Text(
             "My Profile",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -104,138 +167,83 @@ class _DentistProfileState extends State<DentistProfile> {
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView(
                   children: [
-                    // Profile Picture
-                    Center(
-                      child: CircleAvatar(
-                        radius: 80,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage:
-                            profileUrl != null && profileUrl!.isNotEmpty
-                                ? NetworkImage(profileUrl!)
-                                : const AssetImage('assets/default_profile.png')
-                                    as ImageProvider,
-                        child: profileUrl == null || profileUrl!.isEmpty
-                            ? const Icon(Icons.person,
-                                size: 60, color: Colors.grey)
-                            : null,
-                      ),
-                    ),
+                    const SizedBox(height: 10),
+                    Center(child: _buildProfilePicture()),
+                    const SizedBox(height: 16),
+
+                    // Info tiles (aligned with PatientProfile UI)
+                    _buildInfoTile(Icons.person, "Firstname",
+                        dentistDetails?['firstname'] ?? ''),
+                    _buildInfoTile(Icons.person_outline, "Lastname",
+                        dentistDetails?['lastname'] ?? ''),
+                    _buildInfoTile(Icons.phone, "Phone Number",
+                        dentistDetails?['phone'] ?? ''),
+                    _buildInfoTile(
+                        Icons.badge, "Role", dentistDetails?['role'] ?? ''),
+
                     const SizedBox(height: 20),
 
-                    // Dentist Info Fields (read-only)
-                    _buildInfoField(
-                      label: "Firstname",
-                      value: dentistDetails?['firstname'] ?? '',
-                      icon: Icons.person,
-                    ),
-                    _buildInfoField(
-                      label: "Lastname",
-                      value: dentistDetails?['lastname'] ?? '',
-                      icon: Icons.person_outline,
-                    ),
-                    _buildInfoField(
-                      label: "Phone Number",
-                      value: dentistDetails?['phone'] ?? '',
-                      icon: Icons.phone,
-                    ),
-                    _buildInfoField(
-                      label: "Role",
-                      value: dentistDetails?['role'] ?? '',
-                      icon: Icons.badge,
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Edit Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final updated = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DentistProfUpdate(
-                                  dentistId: widget.dentistId),
-                            ),
-                          );
-                          if (updated == true) {
-                            _fetchDentistDetails(); // refresh details
-                          }
-                        },
-                        icon: const Icon(Icons.edit, color: Colors.white),
-                        label: const Text(
-                          'Edit Details',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    // Edit Button (style matches PatientProfile)
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                DentistProfUpdate(dentistId: widget.dentistId),
                           ),
+                        );
+                        if (updated == true) {
+                          _fetchDentistDetails();
+                        }
+                      },
+                      icon: const Icon(Icons.edit, color: Colors.white),
+                      label: const Text(
+                        'Edit Profile',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF103D7E),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await _logout(
-                            (context),
-                          );
-                        },
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        label: const Text(
-                          'Logout',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+
+                    const SizedBox(height: 20),
+
+                    // Logout button (style matches PatientProfile)
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      label: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async => await _logout(context),
                     ),
+
+                    const SizedBox(height: 50),
                   ],
                 ),
               ),
-      ),
-    );
-  }
-
-  /// Styled info display field (readonly)
-  Widget _buildInfoField({
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextFormField(
-        readOnly: true,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: Colors.blueAccent),
-          filled: true,
-          fillColor: Colors.grey[200],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
-          ),
-        ),
-        controller: TextEditingController(text: value),
       ),
     );
   }

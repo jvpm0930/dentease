@@ -126,11 +126,19 @@ class _DentistServListPageState extends State<DentistServListPage> {
     return BackgroundCont(
       child: Scaffold(
         backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            "Clinic Services",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: Colors.white),
+          elevation: 0,
+        ),
         body: Stack(
           children: [
-            const DentistHeader(),
             Positioned.fill(
-              top: 150,
+              top: 30,
               bottom: 100,
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())

@@ -1,3 +1,4 @@
+import 'package:dentease/login/login_screen.dart';
 import 'package:dentease/staff/staff_profile_update.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +36,6 @@ class _StaffProfileState extends State<StaffProfile> {
       setState(() {
         staffDetails = response;
 
-        // Add cache-busting timestamp to profile URL
         final url = response['profile_url'];
         if (url != null && url.isNotEmpty) {
           profileUrl =
@@ -47,42 +47,99 @@ class _StaffProfileState extends State<StaffProfile> {
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching dentist details: $e')),
+        SnackBar(content: Text('Error fetching staff details: $e')),
       );
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            ElevatedButton(
+              child: const Text('Logout'),
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await Supabase.instance.client.auth.signOut();
+
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
     }
   }
 
   Widget _buildProfilePicture() {
     return CircleAvatar(
-      radius: 50,
+      radius: 80,
       backgroundColor: Colors.grey[300],
       backgroundImage: profileUrl != null && profileUrl!.isNotEmpty
           ? NetworkImage(profileUrl!)
-          : const AssetImage('assets/default_profile.png') as ImageProvider,
-      child: profileUrl == null || profileUrl!.isEmpty
-          ? const Icon(Icons.person, size: 50, color: Colors.grey)
-          : null,
+          : const AssetImage('assets/profile.png') as ImageProvider,
     );
   }
 
-  Widget _buildTextField(String hint) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextField(
-        readOnly: true,
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.grey[300],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
+  Widget _buildInfoTile(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF103D7E)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14, color: Colors.grey, height: 1.3)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : 'N/A',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -90,65 +147,99 @@ class _StaffProfileState extends State<StaffProfile> {
   @override
   Widget build(BuildContext context) {
     return BackgroundCont(
-        child: Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: const Text(
-          "My Profile",
-          style: TextStyle(color: Colors.white),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text(
+            "My Profile",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent, // Transparent AppBar
-        elevation: 0, // Remove shadow
-        iconTheme: const IconThemeData(color: Colors.white), // White icons
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  _buildProfilePicture(),
-                  const SizedBox(height: 16),
-                  _buildTextField(staffDetails?['firstname'] ?? 'Firstname'),
-                  _buildTextField(staffDetails?['lastname'] ?? 'Lastname'),
-                  _buildTextField(staffDetails?['phone'] ?? 'Phone'),
-                  _buildTextField(staffDetails?['role'] ?? 'Role'),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView(
+                  children: [
+                    const SizedBox(height: 10),
+                    Center(child: _buildProfilePicture()),
+                    const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
+                    _buildInfoTile(Icons.person, "Firstname",
+                        staffDetails?['firstname'] ?? ''),
+                    _buildInfoTile(Icons.person_outline, "Lastname",
+                        staffDetails?['lastname'] ?? ''),
+                    _buildInfoTile(Icons.phone, "Phone Number",
+                        staffDetails?['phone'] ?? ''),
+                    _buildInfoTile(
+                        Icons.badge, "Role", staffDetails?['role'] ?? ''),
 
-                  // "Edit Details" Button
-                  ElevatedButton(
-                    onPressed: () async {
-                      final updated = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              StaffProfUpdate(staffId: widget.staffId),
+                    const SizedBox(height: 20),
+
+                    // Edit Button
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                StaffProfUpdate(staffId: widget.staffId),
+                          ),
+                        );
+                        if (updated == true) {
+                          _fetchStaffDetails();
+                        }
+                      },
+                      icon: const Icon(Icons.edit, color: Colors.white),
+                      label: const Text(
+                        'Edit Profile',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF103D7E),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-
-                      if (updated == true) {
-                        _fetchStaffDetails(); // Refresh after update
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue, // Button color
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Edit Details',
-                      style: TextStyle(color: Colors.white),
+
+                    const SizedBox(height: 20),
+
+                    // Logout button
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      label: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async => await _logout(context),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 50),
+                  ],
+                ),
               ),
-            ),
-    ));
+      ),
+    );
   }
 }

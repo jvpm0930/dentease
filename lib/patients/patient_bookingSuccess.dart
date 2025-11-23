@@ -106,23 +106,10 @@ class _PatientBookingSuccessState extends State<PatientBookingSuccess>
                       children: [
                         Expanded(
                           child: _PillButton.filled(
-                            label: 'Back to Home',
+                            label: 'Done',
                             onTap: _backToHome,
                             background: kPrimary,
                             foreground: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _PillButton.ghost(
-                            label: 'Done',
-                            onTap: _backToHome,
-                            borderColor: kPrimary.withOpacity(0.35),
-                            textColor: kPrimary,
                           ),
                         ),
                       ],

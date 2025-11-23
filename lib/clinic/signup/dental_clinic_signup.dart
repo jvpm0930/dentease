@@ -107,6 +107,12 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
                       key: _formKey,
                       child: Column(
                         children: [
+                          Text(
+                            'Clinic Verification',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 15),
                           _buildTextField(clinicnameController, 'Clinic Name',
                               Icons.local_hospital),
                           const SizedBox(height: 10),

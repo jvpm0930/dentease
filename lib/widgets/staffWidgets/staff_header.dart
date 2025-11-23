@@ -1,4 +1,3 @@
-import 'package:dentease/login/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,123 +9,96 @@ class StaffHeader extends StatefulWidget {
 }
 
 class _StaffHeaderState extends State<StaffHeader> {
-  String? userEmail; // Stores logged-in user email
+  String? userEmail;
   String? profileUrl;
+  String? firstname;
+  String? lastname;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserEmail();
+    _fetchUserData();
   }
 
-  // Fetches the currently logged-in user's email
-  Future<void> _fetchUserEmail() async {
+  Future<void> _fetchUserData() async {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      setState(() {
-        userEmail = user.email; // Retrieve the email
-      });
-      await _fetchProfileUrl(user.id);
-    }
-  }
+    if (user == null) return;
 
-  Future<void> _fetchProfileUrl(String userId) async {
+    setState(() => userEmail = user.email);
+
     try {
-      final response = await Supabase.instance.client
+      final data = await Supabase.instance.client
           .from('staffs')
-          .select('profile_url')
-          .eq('staff_id', userId)
-          .single();
+          .select('profile_url, firstname, lastname')
+          .eq('staff_id', user.id)
+          .maybeSingle();
 
-      if (response['profile_url'] != null) {
+      if (data != null) {
+        final url = data['profile_url'];
         setState(() {
-          // Add cache-busting timestamp to avoid old cached images
-          final url = response['profile_url'];
-          profileUrl =
-              '$url?timestamp=${DateTime.now().millisecondsSinceEpoch}';
+          firstname = data['firstname'];
+          lastname = data['lastname'];
+          profileUrl = (url != null && url.toString().isNotEmpty)
+              ? '$url?timestamp=${DateTime.now().millisecondsSinceEpoch}'
+              : null;
         });
       }
     } catch (e) {
-      debugPrint('Error fetching profile URL: $e');
-    }
-  }
-
-  Future<void> _logout(BuildContext context) async {
-    try {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          content: const Text('Are you sure you want to log out?'),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(context, false),
-            ),
-            ElevatedButton(
-              child: const Text('Logout'),
-              onPressed: () => Navigator.pop(context, true),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true) {
-        await Supabase.instance.client.auth.signOut();
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logout failed: $e')),
-      );
+      debugPrint('Error fetching staff profile data: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayName =
+        ((firstname ?? '').isNotEmpty || (lastname ?? '').isNotEmpty)
+            ? '${firstname ?? ''} ${lastname ?? ''}'.trim()
+            : (userEmail ?? 'Loading...');
+
     return Padding(
       padding: const EdgeInsets.only(top: 50, left: 20, right: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Profile Image and Email Column
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage:
-                        profileUrl != null && profileUrl!.isNotEmpty
-                            ? NetworkImage(profileUrl!) // Load from Supabase
-                            : const AssetImage('assets/profile.png')
-                                as ImageProvider, // Fallback image
-                    child: profileUrl == null || profileUrl!.isEmpty
-                        ? const Icon(Icons.person, size: 30, color: Colors.grey)
-                        : null,
-                  ),
-                  const SizedBox(height: 8),
-                  // Display Email if Available
-                  Text(
-                    userEmail ?? "Loading...",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: profileUrl != null
+                    ? NetworkImage(profileUrl!)
+                    : const AssetImage('assets/profile.png') as ImageProvider,
+                child: (profileUrl == null)
+                    ? const Icon(Icons.person, size: 30, color: Colors.grey)
+                    : null,
               ),
-              // Logout Button
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white, size: 28),
-                onPressed: () async => await _logout(context),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Hello staff,',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -142,38 +142,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       keyboardType: TextInputType.number,
                     ),
                     SizedBox(height: 10),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: DropdownButtonFormField<String>(
-                        value: genderController.text.isNotEmpty
-                            ? genderController.text
-                            : null,
-                        decoration: InputDecoration(
-                          hintText: 'Gender',
-                          prefixIcon: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Icon(Icons.wc_rounded,
-                                color: Color(0xFF103D7E)),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 14),
+                    DropdownButtonFormField<String>(
+                      value: genderController.text.isNotEmpty ? genderController.text : null,
+                      decoration: InputDecoration(
+                        hintText: 'Gender',
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Icon(Icons.wc_rounded, color: Color(0xFF103D7E)),
                         ),
-                        dropdownColor: Colors.white,
-                        items: const [
-                          DropdownMenuItem(value: 'Male', child: Text('Male')),
-                          DropdownMenuItem(
-                              value: 'Female', child: Text('Female')),
-                          DropdownMenuItem(
-                              value: 'Not Specify', child: Text('Not Specify')),
-                        ],
-                        onChanged: (value) {
-                          genderController.text = value!;
-                        },
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                        // Rounded corners
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(50),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
+                      dropdownColor: Colors.white,
+                      items: const [
+                        DropdownMenuItem(value: 'Male', child: Text('Male')),
+                        DropdownMenuItem(value: 'Female', child: Text('Female')),
+                        DropdownMenuItem(value: 'Not Specify', child: Text('Not Specify')),
+                      ],
+                      onChanged: (value) {
+                        genderController.text = value!;
+                      },
                     ),
                     SizedBox(height: 10),
                     _buildTextField(

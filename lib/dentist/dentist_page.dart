@@ -65,7 +65,7 @@ class _DentistPageState extends State<DentistPage> {
   }
 
   Widget _buildCustomButton({
-    required String title, // kept for semantics/accessibility
+    required String title, 
     required VoidCallback onTap,
     required ImageProvider backgroundImage,
     EdgeInsetsGeometry margin = const EdgeInsets.only(bottom: 12),
@@ -78,7 +78,7 @@ class _DentistPageState extends State<DentistPage> {
         decoration: BoxDecoration(
           image: DecorationImage(
             image: backgroundImage,
-            fit: BoxFit.cover, // same as NearbyClinicsButton
+            fit: BoxFit.cover, 
           ),
           borderRadius: BorderRadius.circular(10),
         ),
@@ -88,7 +88,7 @@ class _DentistPageState extends State<DentistPage> {
             title,
             style: const TextStyle(
               color: Colors.transparent, // same as NearbyClinicsButton
-              fontSize: 30,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -166,7 +166,6 @@ class _DentistPageState extends State<DentistPage> {
                           MaterialPageRoute(
                             builder: (context) => DentistClinicSchedPage(
                               clinicId: widget.clinicId,
-                              dentistId: widget.dentistId,
                             ),
                           ),
                         ),

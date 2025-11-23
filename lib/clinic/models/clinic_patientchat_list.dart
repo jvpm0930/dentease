@@ -103,7 +103,7 @@ class _ClinicPatientChatListState extends State<ClinicPatientChatList> {
         appBar: AppBar(
           title: const Text(
             "Patient Chat List",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,

@@ -102,7 +102,7 @@ class _DentStaffListPageState extends State<DentStaffListPage> {
                       },
                       child: const Text(
                         "Add New Staff",
-                        style: TextStyle(color: const Color(0xFF103D7E)),
+                        style: TextStyle(color: Color(0xFF103D7E)),
                       ),
                     ),
                   ),
@@ -137,7 +137,7 @@ class _DentStaffListPageState extends State<DentStaffListPage> {
                                               "Phone: ${staff['phone'] ?? 'N/A'}"),
                                         ],
                                       ),
-                                      leading: const Icon(Icons.person, color: const Color(0xFF103D7E),),
+                                      leading: const Icon(Icons.person, color: Color(0xFF103D7E),),
                                     ),
                                   );
                                 },

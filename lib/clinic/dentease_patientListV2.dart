@@ -135,7 +135,7 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
                             },
                             child: const Padding(
                               padding: EdgeInsets.only(right: 10),
-                              child: Icon(Icons.info, color: const Color(0xFF103D7E)),
+                              child: Icon(Icons.info, color: Color(0xFF103D7E)),
                             ),
                           ),
                         ),
