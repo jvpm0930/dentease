@@ -76,7 +76,7 @@ class _AdminPagev2State extends State<AdminPagev2> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF103D7E),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text("Approved"),
@@ -87,7 +87,7 @@ class _AdminPagev2State extends State<AdminPagev2> {
                     child: ElevatedButton(
                       onPressed: null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF103D7E),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text("Pending"),
@@ -105,7 +105,7 @@ class _AdminPagev2State extends State<AdminPagev2> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF103D7E),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text("Rejected"),

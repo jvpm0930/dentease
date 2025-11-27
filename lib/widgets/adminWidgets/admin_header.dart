@@ -83,14 +83,14 @@ class _AdminHeaderState extends State<AdminHeader> {
                     userEmail ?? "Loading...",
                     style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
               // Logout Button
               IconButton(
-                icon: const Icon(Icons.logout, color: Colors.black, size: 28),
+                icon: const Icon(Icons.logout, color: Colors.white, size: 28),
                 onPressed: () async => await _logout(context),
               ),
             ],

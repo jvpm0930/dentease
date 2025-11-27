@@ -1,7 +1,6 @@
 import 'package:dentease/dentist/dentist_add_service.dart';
 import 'package:dentease/dentist/dentist_service_details.dart';
 import 'package:dentease/widgets/dentistWidgets/dentist_footer.dart';
-import 'package:dentease/widgets/dentistWidgets/dentist_header.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dentease/widgets/background_cont.dart';

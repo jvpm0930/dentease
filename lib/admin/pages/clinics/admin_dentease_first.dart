@@ -55,6 +55,7 @@ class _AdminPageState extends State<AdminPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          foregroundColor: Colors.white,
           backgroundColor: Colors.transparent,
           title: const AdminHeader(),
         ),
@@ -69,7 +70,7 @@ class _AdminPageState extends State<AdminPage> {
                     child: ElevatedButton(
                       onPressed: null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF103D7E),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text("Approved"),
@@ -87,7 +88,7 @@ class _AdminPageState extends State<AdminPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF103D7E),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text("Pending"),
@@ -105,7 +106,7 @@ class _AdminPageState extends State<AdminPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF103D7E),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text("Rejected"),

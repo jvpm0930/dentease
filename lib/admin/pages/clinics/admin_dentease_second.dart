@@ -44,7 +44,8 @@ class AdmClinicDashboardPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
-          title: Text(clinicName),
+          foregroundColor: Colors.white,
+          title: Text(clinicName, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16),

@@ -18,7 +18,9 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
 
   Map<String, dynamic>? clinicDetails;
   bool isLoading = true;
-  String selectedStatus = 'pending'; // Default value
+  String selectedStatus = 'pending';
+
+  static const kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -31,7 +33,8 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       final response = await supabase
           .from('clinics')
           .select(
-              'clinic_name, email, info, license_url, office_url, permit_url, latitude, longitude, address, status, note')
+            'clinic_name, email, info, license_url, office_url, permit_url, latitude, longitude, address, status, note',
+          )
           .eq('clinic_id', widget.clinicId)
           .maybeSingle();
 
@@ -42,16 +45,16 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       setState(() {
         clinicDetails = response;
         selectedStatus = response['status'] ?? 'pending';
-        _noteController.text = response['note'] ?? ''; // preload existing note
+        _noteController.text = response['note'] ?? '';
         isLoading = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching clinic details')),
-      );
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error fetching clinic details')),
+        );
+      }
+      setState(() => isLoading = false);
     }
   }
 
@@ -61,13 +64,17 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
           .from('clinics')
           .update({'status': selectedStatus}).eq('clinic_id', widget.clinicId);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Status updated successfully')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status updated successfully')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating status')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error updating status')),
+        );
+      }
     }
   }
 
@@ -85,13 +92,28 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
           .from('clinics')
           .update({'note': noteText}).eq('clinic_id', widget.clinicId);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Note sent successfully')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Note sent successfully')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending note')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error sending note')),
+        );
+      }
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return Colors.green.shade600;
+      case 'rejected':
+        return Colors.red.shade600;
+      default:
+        return Colors.orange.shade700;
     }
   }
 
@@ -101,8 +123,13 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          foregroundColor: Colors.white,
           backgroundColor: Colors.transparent,
-          title: const Text('Clinic Details'),
+          elevation: 0,
+          title: const Text(
+            'Clinic Details',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -110,302 +137,311 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                 ? const Center(child: Text('No details found'))
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
+                    physics: const BouncingScrollPhysics(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          clinicDetails!['clinic_name'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            const Icon(Icons.approval, color: Colors.indigo),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: DropdownButton<String>(
-                                value: selectedStatus,
-                                onChanged: (newValue) {
-                                  setState(() {
-                                    selectedStatus = newValue!;
-                                  });
-                                },
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'pending',
-                                    child: Text('Pending'),
+                        // Header: Name + Status chip
+                        _SectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                clinicDetails!['clinic_name'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Chip(
+                                    label: Text(
+                                      (clinicDetails!['status'] ?? 'pending')
+                                          .toString()
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    backgroundColor: _statusColor(
+                                        clinicDetails!['status'] ?? 'pending'),
                                   ),
-                                  DropdownMenuItem(
-                                    value: 'rejected',
-                                    child: Text('Rejected'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'approved',
-                                    child: Text('Approved'),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Current Status',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black54,
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                            ElevatedButton(
-                              onPressed: _updateStatus,
-                              child: const Text('Update Status'),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        const Divider(thickness: 1.5, color: Colors.blueGrey),
-                        const SizedBox(height: 20),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.note_alt, color: Colors.indigo),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: _noteController,
-                                maxLines: null,
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter note...',
-                                  border: OutlineInputBorder(),
-                                ),
+
+                        const SizedBox(height: 12),
+
+                        // Status update area
+                        _SectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionTitle(
+                                icon: Icons.approval,
+                                title: 'Update Status',
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: _updateNote,
-                              child: const Text('Send Note'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        const Divider(thickness: 1.5, color: Colors.blueGrey),
-                        const SizedBox(height: 20),
-                        Row(  
-                          children: [
-                            const Icon(Icons.email, color: Colors.indigo),
-                            const SizedBox(width: 8),
-                            Text(
-                              clinicDetails!['email'] ?? 'No email provided',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.info, color: Colors.indigo),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              // allows the text to wrap properly
-                              child: Text(
-                                clinicDetails!['info'] ?? 'No info provided',
-                                style: const TextStyle(fontSize: 16),
-                                softWrap: true, // optional, ensures wrapping
-                                overflow: TextOverflow
-                                    .visible, // makes sure text is fully shown
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      value: selectedStatus,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'pending',
+                                          child: Text('Pending'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'rejected',
+                                          child: Text('Rejected'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'approved',
+                                          child: Text('Approved'),
+                                        ),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() => selectedStatus = val);
+                                        }
+                                      },
+                                      decoration: InputDecoration(
+                                        labelText: 'Select new status',
+                                        prefixIcon: const Icon(Icons.flag),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                            color: Colors.grey.shade300,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton.icon(
+                                    onPressed: _updateStatus,
+                                    icon: const Icon(Icons.save),
+                                    label: const Text('Update'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: kPrimary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14, horizontal: 18),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        const Divider(thickness: 1.5, color: Colors.blueGrey),
-                        const SizedBox(height: 20),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.location_on, color: Colors.indigo),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                clinicDetails!['address'] ??
+
+                        const SizedBox(height: 12),
+
+                        // Notes
+                        _SectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionTitle(
+                                icon: Icons.note_alt,
+                                title: 'Admin Note to Clinic',
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _noteController,
+                                      minLines: 3,
+                                      maxLines: 6,
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Write a note or reason for status changes...',
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton.icon(
+                                    onPressed: _updateNote,
+                                    icon: const Icon(Icons.send),
+                                    label: const Text('Send'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: kPrimary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14, horizontal: 18),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Contact + Info
+                        _SectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionTitle(
+                                icon: Icons.info_outline,
+                                title: 'Clinic Information',
+                              ),
+                              const SizedBox(height: 12),
+                              _InfoRow(
+                                icon: Icons.email,
+                                label: 'Email',
+                                value: clinicDetails!['email'] ??
+                                    'No email provided',
+                              ),
+                              const SizedBox(height: 10),
+                              _InfoRow(
+                                icon: Icons.location_on,
+                                label: 'Address',
+                                value: clinicDetails!['address'] ??
                                     'No address provided',
-                                style: const TextStyle(fontSize: 16),
+                                multiLine: true,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 10),
+                              _InfoRow(
+                                icon: Icons.description,
+                                label: 'Info',
+                                value: clinicDetails!['info'] ??
+                                    'No info provided',
+                                multiLine: true,
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
+
+                        const SizedBox(height: 12),
+
+                        // Map
                         if (clinicDetails!['latitude'] != null &&
                             clinicDetails!['longitude'] != null)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                height: 200,
-                                child: GoogleMap(
-                                  initialCameraPosition: CameraPosition(
-                                    target: LatLng(
-                                      clinicDetails!['latitude'],
-                                      clinicDetails!['longitude'],
-                                    ),
-                                    zoom: 15,
-                                  ),
-                                  markers: {
-                                    Marker(
-                                      markerId: const MarkerId('clinicLocation'),
-                                      position: LatLng(
-                                        clinicDetails!['latitude'],
-                                        clinicDetails!['longitude'],
-                                      ),
-                                    ),
-                                  },
+                          _SectionCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _SectionTitle(
+                                  icon: Icons.map,
+                                  title: 'Location',
                                 ),
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 20),
-                        const Divider(thickness: 1.5, color: Colors.blueGrey),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'PRC Credentials:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (clinicDetails!['license_url'] != null &&
-                            (clinicDetails!['license_url'] as String)
-                                .isNotEmpty)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FullScreenImage(
-                                        imageUrl: clinicDetails!['license_url'],
+                                const SizedBox(height: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: SizedBox(
+                                    height: 200,
+                                    child: GoogleMap(
+                                      initialCameraPosition: CameraPosition(
+                                        target: LatLng(
+                                          (clinicDetails!['latitude'] as num)
+                                              .toDouble(),
+                                          (clinicDetails!['longitude'] as num)
+                                              .toDouble(),
+                                        ),
+                                        zoom: 15,
                                       ),
+                                      markers: {
+                                        Marker(
+                                          markerId:
+                                              const MarkerId('clinicLocation'),
+                                          position: LatLng(
+                                            (clinicDetails!['latitude'] as num)
+                                                .toDouble(),
+                                            (clinicDetails!['longitude'] as num)
+                                                .toDouble(),
+                                          ),
+                                        ),
+                                      },
+                                      myLocationButtonEnabled: false,
+                                      zoomControlsEnabled: false,
                                     ),
-                                  );
-                                },
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    clinicDetails!['license_url'],
-                                    height: 150,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                              ),
-                            ],
-                          )
-                        else
-                          const Text(
-                            "No PRC License image is available.",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.grey,
+                              ],
                             ),
                           ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'DTI Permit:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (clinicDetails!['permit_url'] != null &&
-                            (clinicDetails!['permit_url'] as String)
-                                .isNotEmpty)
-                          Column(
+
+                        const SizedBox(height: 12),
+
+                        // Credentials
+                        _SectionCard(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FullScreenImage(
-                                        imageUrl: clinicDetails!['permit_url'],
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    clinicDetails!['permit_url'],
-                                    height: 150,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                              const _SectionTitle(
+                                icon: Icons.verified_user,
+                                title: 'Credentials',
+                              ),
+                              const SizedBox(height: 12),
+                              _ImageTile(
+                                title: 'PRC Credentials',
+                                url: clinicDetails!['license_url'],
+                              ),
+                              const SizedBox(height: 12),
+                              _ImageTile(
+                                title: 'DTI Permit',
+                                url: clinicDetails!['permit_url'],
+                              ),
+                              const SizedBox(height: 12),
+                              _ImageTile(
+                                title: 'Workplace',
+                                url: clinicDetails!['office_url'],
                               ),
                             ],
-                          )
-                        else
-                          const Text(
-                            "No DTI Permit image is available.",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Workplace:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        if (clinicDetails!['office_url'] != null &&
-                            (clinicDetails!['office_url'] as String).isNotEmpty)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FullScreenImage(
-                                        imageUrl: clinicDetails!['office_url'],
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    clinicDetails!['office_url'],
-                                    height: 150,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          const Text(
-                            "No Workplace image is available.",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        const SizedBox(height: 20),
-                        const Divider(thickness: 1.5, color: Colors.blueGrey),
-                        const SizedBox(height: 50),
+
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -413,6 +449,173 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
     );
   }
 }
+
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+  const _SectionCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _SectionTitle({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF103D7E);
+    return Row(
+      children: [
+        Icon(icon, color: color),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool multiLine;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.multiLine = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const kPrimary = Color(0xFF103D7E);
+    return Row(
+      crossAxisAlignment:
+          multiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Icon(icon, color: kPrimary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(fontSize: 15, color: Colors.black87),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  final String title;
+  final String? url;
+
+  const _ImageTile({required this.title, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    const placeholderStyle = TextStyle(
+      fontSize: 14,
+      fontStyle: FontStyle.italic,
+      color: Colors.grey,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            )),
+        const SizedBox(height: 8),
+        if (url != null && (url as String).isNotEmpty)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FullScreenImage(imageUrl: url!),
+                ),
+              );
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  url!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.image_not_supported, color: Colors.grey),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'No image available.',
+                    style: placeholderStyle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
   const FullScreenImage({super.key, required this.imageUrl});

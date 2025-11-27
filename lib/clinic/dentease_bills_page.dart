@@ -2,8 +2,6 @@ import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Keep your existing imports and logic above as-is.
-
 class BillCalculatorPage extends StatefulWidget {
   final String clinicId;
   final String patientId;
@@ -25,6 +23,10 @@ class BillCalculatorPage extends StatefulWidget {
 class _BillCalculatorPageState extends State<BillCalculatorPage> {
   final supabase = Supabase.instance.client;
 
+  // Form
+  final _formKey = GlobalKey<FormState>();
+
+  // Controllers
   final TextEditingController serviceNameController = TextEditingController();
   final TextEditingController servicePriceController = TextEditingController();
   final TextEditingController doctorFeeController = TextEditingController();
@@ -33,7 +35,6 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
   final TextEditingController receivedMoneyController = TextEditingController();
 
   double? change;
-  String? billId;
   bool loading = true;
   String? patientName;
 
@@ -47,6 +48,8 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     'Others'
   ];
 
+  bool _hasShownWarning = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,8 +57,6 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     _loadPatientName();
     receivedMoneyController.addListener(_calculateChange);
   }
-
-  bool _hasShownWarning = false;
 
   void _calculateChange() {
     final total = double.tryParse(totalAmountController.text) ?? 0;
@@ -112,7 +113,9 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
       if (result != null) {
         serviceNameController.text = result['service_name'] ?? '';
-        servicePriceController.text = result['service_price']?.toString() ?? '';
+        servicePriceController.text = (result['service_price'] != null)
+            ? result['service_price'].toString()
+            : '';
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("No service found.")),
@@ -127,13 +130,44 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     }
   }
 
-  Future<void> _submitBill() async {
-    final serviceName = serviceNameController.text.trim();
-    final servicePrice = servicePriceController.text.trim();
-    final medicineFee = medicineFeeController.text.trim();
-    final doctorFee = doctorFeeController.text.trim();
+  // Validators
+  String? _requiredValidator(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Required';
+    return null;
+  }
 
-    if (serviceName.isEmpty || servicePrice == 0) {
+  String? _numberValidator(String? v, {bool required = false}) {
+    if ((v == null || v.trim().isEmpty)) {
+      return required ? 'Required' : null;
+    }
+    final d = double.tryParse(v);
+    if (d == null) return 'Enter a valid number';
+    if (d < 0) return 'Must be >= 0';
+    return null;
+  }
+
+  Future<void> _submitBill() async {
+    // Ensure all required fields/validators pass before submit
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please complete all required fields.")),
+      );
+      return;
+    }
+
+    final serviceName = serviceNameController.text.trim();
+    final servicePrice =servicePriceController.text.trim();
+    final medicineFee = double.tryParse(
+            medicineFeeController.text.trim().isEmpty
+                ? '0'
+                : medicineFeeController.text.trim()) ??
+        0;
+    final doctorFee = double.tryParse(doctorFeeController.text.trim().isEmpty
+            ? '0'
+            : doctorFeeController.text.trim()) ??
+        0;
+
+    if (serviceName.isEmpty || servicePrice.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter valid service data.")),
       );
@@ -162,7 +196,8 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
       if (receivedMoney < totalAmount) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Received money must be greater than total amount."),
+            content: Text(
+                "Received money must be greater than or equal to total amount."),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -185,13 +220,6 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         'bill_change': billChange,
         'payment_mode': selectedPaymentMode,
       };
-
-      if (selectedPaymentMode != null) {
-        billData['payment_mode'] = selectedPaymentMode;
-      }
-
-      billData['recieved_money'] = receivedMoney;
-      billData['bill_change'] = billChange;
 
       await supabase.from('bills').insert(billData);
 
@@ -250,207 +278,215 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    // Service details
-                    _SectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(
-                            icon: Icons.design_services,
-                            title: 'Service Details',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            serviceNameController,
-                            'Service Name',
-                            Icons.badge_outlined,
-                            readOnly: true,
-                          ),
-                          const SizedBox(height: 10),
-                          _buildTextField(
-                            servicePriceController,
-                            'Service Price',
-                            Icons.payments_outlined,
-                            number: true,
-                            readOnly: true,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Fees
-                    _SectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(
-                            icon: Icons.medical_services,
-                            title: 'Fees',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTextField(
-                            medicineFeeController,
-                            'Medicine Fee',
-                            Icons.local_pharmacy_outlined,
-                            number: true,
-                          ),
-                          const SizedBox(height: 10),
-                          _buildTextField(
-                            doctorFeeController,
-                            'Additional Fee',
-                            Icons.medical_services_outlined,
-                            number: true,
-                          ),
-                          const SizedBox(height: 10),
-                          _buildTextField(
-                            totalAmountController,
-                            'Total Amount',
-                            Icons.calculate_outlined,
-                            number: true,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Payment
-                    _SectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(
-                            icon: Icons.payment_rounded,
-                            title: 'Payment',
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            value: selectedPaymentMode,
-                            items: paymentModes
-                                .map(
-                                  (mode) => DropdownMenuItem(
-                                    value: mode,
-                                    child: Text(mode),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedPaymentMode = value;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              labelText: "Mode of Payment",
-                              prefixIcon: const Icon(Icons.credit_card),
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    children: [
+                      // Service details
+                      _SectionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionTitle(
+                              icon: Icons.design_services,
+                              title: 'Service Details',
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          _buildTextField(
-                            receivedMoneyController,
-                            'Received Money',
-                            Icons.account_balance_wallet_outlined,
-                            number: true,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Summary
-                    _SectionCard(
-                      child: Row(
-                        children: [
-                          const Icon(Icons.receipt_long, color: kPrimary),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              change != null
-                                  ? "Change: PHP ${change!.toStringAsFixed(2)}"
-                                  : "Enter received amount to compute change",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: change != null
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
-                                color: change != null
-                                    ? Colors.green.shade700
-                                    : Colors.black54,
-                              ),
+                            const SizedBox(height: 12),
+                            _buildFormField(
+                              controller: serviceNameController,
+                              label: 'Service Name',
+                              icon: Icons.badge_outlined,
+                              readOnly: true,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    // Submit
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _submitBill,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: const Text(
-                          "Submit Bill",
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                            const SizedBox(height: 10),
+                            _buildFormField(
+                              controller: servicePriceController,
+                              label: 'Service Price',
+                              icon: Icons.payments_outlined,
+                              readOnly: true,
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+
+                      const SizedBox(height: 12),
+
+                      // Fees
+                      _SectionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionTitle(
+                              icon: Icons.medical_services,
+                              title: 'Fees',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildFormField(
+                              controller: medicineFeeController,
+                              label: 'Medicine Fee',
+                              icon: Icons.local_pharmacy_outlined,
+                              number: true,
+                              validator: (v) =>
+                                  _numberValidator(v, required: false),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildFormField(
+                              controller: doctorFeeController,
+                              label: 'Additional Fee',
+                              icon: Icons.medical_services_outlined,
+                              number: true,
+                              validator: (v) =>
+                                  _numberValidator(v, required: false),
+                            )
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Payment
+                      _SectionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionTitle(
+                              icon: Icons.payment_rounded,
+                              title: 'Payment',
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              value: selectedPaymentMode,
+                              items: paymentModes
+                                  .map(
+                                    (mode) => DropdownMenuItem(
+                                      value: mode,
+                                      child: Text(mode),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentMode = value;
+                                });
+                              },
+                              validator: (v) => v == null
+                                  ? 'Please select a payment mode'
+                                  : null,
+                              decoration: InputDecoration(
+                                labelText: "Mode of Payment",
+                                prefixIcon: const Icon(Icons.credit_card),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildFormField(
+                              controller: totalAmountController,
+                              label: 'Total Amount',
+                              icon: Icons.calculate_outlined,
+                              number: true,
+                              validator: (v) =>
+                                  _numberValidator(v, required: true),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildFormField(
+                              controller: receivedMoneyController,
+                              label: 'Received Money',
+                              icon: Icons.account_balance_wallet_outlined,
+                              number: true,
+                              validator: (v) =>
+                                  _numberValidator(v, required: true),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Summary
+                      _SectionCard(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.receipt_long, color: kPrimary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                change != null
+                                    ? "Change: PHP ${change!.toStringAsFixed(2)}"
+                                    : "Enter received amount to compute change",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: change != null
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: change != null
+                                      ? Colors.green.shade700
+                                      : Colors.black54,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Submit
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _submitBill,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kPrimary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Text(
+                            "Submit Bill",
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
       ),
     );
   }
 
-  // Styled TextField used throughout (keeps your original signature)
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon, {
+  // TextFormField with validator
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
     bool number = false,
     bool readOnly = false,
-    TextInputType? keyboardType,
-    TextInputAction? textInputAction,
-    int? minLines,
-    int? maxLines,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       readOnly: readOnly,
-      keyboardType: keyboardType ??
-          (number
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text),
-      textInputAction: textInputAction,
-      minLines: minLines,
-      maxLines: maxLines,
+      validator: validator,
+      keyboardType: number
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: const Color(0xFF103D7E)),

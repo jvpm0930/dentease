@@ -21,6 +21,7 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
   String selectedRole = 'user';
 
   bool isLoading = true;
+  static const kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -90,16 +91,18 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    TextFormField(
+                    _buildInputField(
                       controller: firstnameController,
-                      decoration: const InputDecoration(labelText: 'Firstname'),
-                      validator: (value) => value!.isEmpty ? 'Required' : null,
+                      label: 'Firstname',
+                      icon: Icons.person,
+                      validatorMsg: 'Required',
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
+                    _buildInputField(
                       controller: lastnameController,
-                      decoration: const InputDecoration(labelText: 'Lastname'),
-                      validator: (value) => value!.isEmpty ? 'Required' : null,
+                      label: 'Lastname',
+                      icon: Icons.person_outline,
+                      validatorMsg: 'Required',
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -134,6 +137,48 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? validatorMsg,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: TextFormField(
+        controller: controller,
+        validator: validatorMsg != null
+            ? (value) =>
+                value == null || value.trim().isEmpty ? validatorMsg : null
+            : null,
+        keyboardType: keyboardType,
+        style: const TextStyle(fontSize: 16, color: Colors.black87),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: Icon(icon, color: kPrimary),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: kPrimary, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.redAccent),
+          ),
+        ),
+      ),
     );
   }
 }

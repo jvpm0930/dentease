@@ -52,7 +52,7 @@ class _AdminFooterState extends State<AdminFooter> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       margin: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.blue,
+        color: Color(0xFF103D7E),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(

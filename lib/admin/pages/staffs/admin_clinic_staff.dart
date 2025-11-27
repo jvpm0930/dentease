@@ -1,4 +1,5 @@
 import 'package:dentease/admin/pages/staffs/admin_staff_details.dart';
+import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -47,72 +48,77 @@ class _AdmClinicStaffsPageState extends State<AdmClinicStaffsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Staffs List'),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : staffs.isEmpty
-              ? const Center(child: Text('No staffs found.'))
-              : ListView.builder(
-                  itemCount: staffs.length,
-                  itemBuilder: (context, index) {
-                    final staff = staffs[index];
-                    final String fullName =
-                        'Sec. ${staff['firstname'] ?? ''} ${staff['lastname'] ?? ''}';
-
-                    return GestureDetector(
-                      onTap: () {
-                        // Navigate to DentistDetailsPage with dentist_id
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AdmStaffDetailsPage(
-                              staffId: staff['staff_id'],
+    return BackgroundCont(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
+          title: const Text('Staffs List', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
+        ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : staffs.isEmpty
+                ? const Center(child: Text('No staffs found.'))
+                : ListView.builder(
+                    itemCount: staffs.length,
+                    itemBuilder: (context, index) {
+                      final staff = staffs[index];
+                      final String fullName =
+                          'Sec. ${staff['firstname'] ?? ''} ${staff['lastname'] ?? ''}';
+      
+                      return GestureDetector(
+                        onTap: () {
+                          // Navigate to DentistDetailsPage with dentist_id
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AdmStaffDetailsPage(
+                                staffId: staff['staff_id'],
+                              ),
                             ),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 6, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color:
+                                Colors.purple.shade50, // Light purple background
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 6, horizontal: 16),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color:
-                              Colors.purple.shade50, // Light purple background
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  fullName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.black,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    fullName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  staff['email'] ?? 'No email available',
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                            const Icon(Icons.chevron_right, color: Colors.grey),
-                          ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    staff['email'] ?? 'No email available',
+                                    style: const TextStyle(
+                                        fontSize: 14, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              const Icon(Icons.chevron_right, color: Colors.grey),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

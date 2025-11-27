@@ -290,21 +290,6 @@ class _EditBillPageState extends State<EditBillPage> {
                               });
                             },
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Totals
-                    _SectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(
-                            icon: Icons.calculate_outlined,
-                            title: 'Totals',
-                          ),
                           const SizedBox(height: 12),
                           _buildTextField(
                             totalController,
@@ -320,7 +305,17 @@ class _EditBillPageState extends State<EditBillPage> {
                                 .account_balance_wallet_outlined, // wallet icon
                             number: true,
                           ),
-                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Totals
+                    _SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           _buildTextField(
                             changeController,
                             'Change',
