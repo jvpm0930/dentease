@@ -156,17 +156,9 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     }
 
     final serviceName = serviceNameController.text.trim();
-    final servicePrice =servicePriceController.text.trim();
-    final medicineFee = double.tryParse(
-            medicineFeeController.text.trim().isEmpty
-                ? '0'
-                : medicineFeeController.text.trim()) ??
-        0;
-    final doctorFee = double.tryParse(doctorFeeController.text.trim().isEmpty
-            ? '0'
-            : doctorFeeController.text.trim()) ??
-        0;
-
+    final servicePrice = servicePriceController.text.trim();
+    final medicineFee = medicineFeeController.text.trim();
+    final doctorFee = doctorFeeController.text.trim();
     if (serviceName.isEmpty || servicePrice.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter valid service data.")),
@@ -326,18 +318,12 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                               controller: medicineFeeController,
                               label: 'Medicine Fee',
                               icon: Icons.local_pharmacy_outlined,
-                              number: true,
-                              validator: (v) =>
-                                  _numberValidator(v, required: false),
                             ),
                             const SizedBox(height: 10),
                             _buildFormField(
                               controller: doctorFeeController,
                               label: 'Additional Fee',
                               icon: Icons.medical_services_outlined,
-                              number: true,
-                              validator: (v) =>
-                                  _numberValidator(v, required: false),
                             )
                           ],
                         ),

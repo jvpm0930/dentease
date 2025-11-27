@@ -224,14 +224,12 @@ class _EditBillPageState extends State<EditBillPage> {
                             medicineFeeController,
                             'Medicine Fee',
                             Icons.medication, // medical icon
-                            number: true,
                           ),
                           const SizedBox(height: 10),
                           _buildTextField(
                             doctorFeeController,
                             'Additional Fee',
                             Icons.home_repair_service, // neutral icon
-                            number: true,
                             minLines: 1,
                             maxLines: 5,
                           ),
