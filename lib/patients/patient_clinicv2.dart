@@ -19,10 +19,14 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
   List<Map<String, dynamic>> reviews = [];
   bool isLoading = true;
   String errorMessage = '';
+  bool hasBooking = false;
+  String? patientId;
+
 
   @override
   void initState() {
     super.initState();
+    patientId = supabase.auth.currentUser?.id;
     _fetchClinicDetails();
   }
 
@@ -47,10 +51,27 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
           .eq('clinic_id', widget.clinicId)
           .order('created_at', ascending: false);
 
+      // Check if user has any booking in this clinic
+      bool bookingExists = false;
+
+      if (patientId != null) {
+        final bookingCheck = await supabase
+        .from('bookings')
+        .select('booking_id')
+        .eq('clinic_id', widget.clinicId)
+        .eq('patient_id', patientId!)
+        .eq('status', 'approved')   // only approved bookings count
+        .limit(1);
+
+
+        bookingExists = bookingCheck.isNotEmpty;
+      }
+
       setState(() {
         clinic = clinicResponse;
         services = List<Map<String, dynamic>>.from(servicesResponse);
         reviews = List<Map<String, dynamic>>.from(feedbackResponse);
+        hasBooking = bookingExists; // ⬅ store result
         isLoading = false;
       });
     } catch (e) {
@@ -60,6 +81,7 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -298,23 +320,29 @@ class _PatientClinicInfoPageState extends State<PatientClinicInfoPage> {
                               ListView(
                                 padding: const EdgeInsets.all(25),
                                 children: [
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              PatientFeedbackpage(
-                                                  clinicId: widget.clinicId),
+                                  if (hasBooking)
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                PatientFeedbackpage(
+                                              clinicId: widget.clinicId,
+                                            ),
+                                          ),
+                                        ).then((_) => _fetchClinicDetails());
+                                      },
+                                      icon: const Icon(Icons.feedback,
+                                          color: Color(0xFF103D7E)),
+                                      label: const Text(
+                                        "Add Review",
+                                        style: TextStyle(
+                                          color: Color(0xFF103D7E),
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                      ).then((_) => _fetchClinicDetails());
-                                    },
-                                    icon: const Icon(Icons.feedback, color: Color(0xFF103D7E)),
-                                    label: const Text("Add Review", style: TextStyle(
-                                      color: Color(0xFF103D7E),
-                                      fontWeight: FontWeight.bold,
-                                    ),),
-                                  ),
+                                      ),
+                                    ),
                                   const SizedBox(height: 16),
                                   if (reviews.isEmpty)
                                     const Text(

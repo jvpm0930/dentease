@@ -110,17 +110,26 @@ class _PatientBookingPageState extends State<PatientBookingPage> {
           .where((v) => v >= 0)
           .toList();
 
-      final filteredAvailable = tempAvailableHours
+      var filteredAvailable = tempAvailableHours
           .where((h) => !tempBookedHours.contains(h))
-          .toSet()
-          .toList()
-        ..sort();
+          .toList();
+          
+      final now = DateTime.now();
+      if (selectedDate.year == now.year &&
+          selectedDate.month == now.month &&
+          selectedDate.day == now.day) {
+        filteredAvailable.removeWhere((h) => h <= now.hour);
+      }
+
+      filteredAvailable.sort();
+
 
       setState(() {
         availableHours = filteredAvailable;
         bookedHours = tempBookedHours;
-        selectedHour = null; // Reset selection each day
+        selectedHour = null;
       });
+
     } catch (e) {
       setState(() => errorMessage = 'Error fetching slots: $e');
     }

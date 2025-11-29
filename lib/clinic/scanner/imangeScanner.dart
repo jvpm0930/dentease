@@ -24,7 +24,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   List<Map<String, dynamic>> services = [];
 
   final validDiseases = const [
-    "Chipped or Fractured",
+    "Chipped or Fractured Tooth",
     "Gingivitis",
     "Healthy Tooth",
     "Malocclusion",
@@ -108,8 +108,8 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       final detectedLabel = _cleanLabel(detectedLabelRaw); // <-- sanitize
       final detectedConfidence = (result['confidence'] * 100);
 
-      // Relax threshold to 90%
-      const minConfidence = 90.0;
+      // Relax threshold to 75%
+      const minConfidence = 75.0;
 
       if (validDiseases
               .map((e) => e.toLowerCase())

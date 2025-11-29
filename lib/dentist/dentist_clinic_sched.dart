@@ -28,6 +28,10 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
 
   bool isFetching = true;
   bool isSaving = false;
+  bool defaultNineToFiveEnabled = false;
+  String defaultScheduleMode = "off"; 
+
+
 
   @override
   void initState() {
@@ -192,6 +196,96 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
     }
   }
 
+  Future<void> _updateSchedule({
+    required dynamic schedId,
+    required DateTime newDate,
+    required int newStart,
+    required int newEnd,
+  }) async {
+    try {
+      final formattedDate = DateFormat('yyyy-MM-dd').format(newDate);
+
+      await supabase.from('clinics_sched').update({
+        'date': formattedDate,
+        'start_time': newStart,
+        'end_time': newEnd,
+      }).eq('sched_id', schedId);
+
+      await _fetchSchedule();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Schedule updated successfully!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating schedule: $e')),
+      );
+    }
+  }
+
+
+  Future<void> _enableDefaultSchedule({required bool weekdays}) async {
+    setState(() => isSaving = true);
+
+    final now = DateTime.now();
+    final end = now.add(const Duration(days: 30));
+
+    for (DateTime d = now;
+        d.isBefore(end);
+        d = d.add(const Duration(days: 1))) {
+      final isWeekday = d.weekday >= 1 && d.weekday <= 5;
+      final isWeekend = d.weekday == 6 || d.weekday == 7;
+
+      if ((weekdays && isWeekday) || (!weekdays && isWeekend)) {
+        final formattedDate = DateFormat('yyyy-MM-dd').format(d);
+
+        final existing = await supabase
+            .from('clinics_sched')
+            .select()
+            .eq('clinic_id', widget.clinicId)
+            .eq('date', formattedDate)
+            .eq('start_time', 9)
+            .eq('end_time', 17);
+
+        if (existing.isEmpty) {
+          await supabase.from('clinics_sched').insert({
+            'clinic_id': widget.clinicId,
+            'date': formattedDate,
+            'start_time': 9,
+            'end_time': 17,
+          });
+        }
+      }
+    }
+
+    await _fetchSchedule();
+    setState(() => isSaving = false);
+  }
+
+
+
+  Future<void> _disableDefaultSchedule() async {
+    setState(() => isSaving = true);
+
+    await supabase
+        .from('clinics_sched')
+        .delete()
+        .eq('clinic_id', widget.clinicId)
+        .eq('start_time', 9)
+        .eq('end_time', 17);
+
+    await _fetchSchedule();
+    setState(() => isSaving = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Default schedule removed!')),
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final startOptions = List.generate(24, (i) => i);
@@ -217,6 +311,34 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
             child: Column(
               children: [
                 // Create Schedule Card
+                _SectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Default Schedule (9 AM - 5 PM)",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildModeButton("Off", "off"),
+                          _buildModeButton("Weekdays", "weekdays"),
+                          _buildModeButton("Weekends", "weekends"),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+
+                const SizedBox(height: 16),
+
                 _SectionCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,8 +515,7 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border:
-                                    Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: Colors.grey.shade300),
                               ),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
@@ -415,12 +536,25 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
                                   "${_hourLabel(st)} - ${_hourLabel(et)}",
                                   style: const TextStyle(color: Colors.black87),
                                 ),
-                                trailing: IconButton(
-                                  tooltip: 'Delete',
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.red),
-                                  onPressed: () =>
-                                      _confirmDelete(s['sched_id']),
+
+                                //  Correct placement for multiple buttons
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Edit',
+                                      icon: const Icon(Icons.edit,
+                                          color: Color(0xFF103D7E)),
+                                      onPressed: () => _editScheduleDialog(s),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Delete',
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red),
+                                      onPressed: () =>
+                                          _confirmDelete(s['sched_id']),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
@@ -436,6 +570,153 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
       ),
     );
   }
+
+  void _editScheduleDialog(Map<String, dynamic> s) {
+    DateTime initialDate = DateTime.parse(s['date']);
+    int initialStart = s['start_time'];
+    int initialEnd = s['end_time'];
+
+    DateTime newDate = initialDate;
+    int newStart = initialStart;
+    int newEnd = initialEnd;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateSB) {
+            return AlertDialog(
+              title: const Text("Edit Schedule"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // DATE PICKER
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(DateFormat('MMM d, y').format(newDate)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.calendar_month),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: newDate,
+                            firstDate: DateTime.now(),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 60)),
+                          );
+                          if (picked != null) {
+                            setStateSB(() => newDate = picked);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // START TIME
+                  DropdownButtonFormField<int>(
+                    value: newStart,
+                    decoration: const InputDecoration(labelText: "Start Time"),
+                    items: List.generate(24, (i) => i)
+                        .map((h) => DropdownMenuItem(
+                              value: h,
+                              child: Text(TimeOfDay(hour: h, minute: 0)
+                                  .format(context)),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setStateSB(() {
+                        newStart = v;
+                        if (newEnd <= newStart) newEnd = newStart + 1;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // END TIME
+                  DropdownButtonFormField<int>(
+                    value: newEnd,
+                    decoration: const InputDecoration(labelText: "End Time"),
+                    items: List.generate(23 - newStart, (i) => newStart + 1 + i)
+                        .map((h) => DropdownMenuItem(
+                              value: h,
+                              child: Text(TimeOfDay(hour: h, minute: 0)
+                                  .format(context)),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setStateSB(() => newEnd = v);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("Cancel"),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                ElevatedButton(
+                  child: const Text("Save"),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await _updateSchedule(
+                      schedId: s['sched_id'],
+                      newDate: newDate,
+                      newStart: newStart,
+                      newEnd: newEnd,
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+  Widget _buildModeButton(String label, String mode) {
+    final bool isActive = (defaultScheduleMode == mode);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () async {
+          setState(() => defaultScheduleMode = mode);
+
+          if (mode == "off") {
+            await _disableDefaultSchedule();
+          } else if (mode == "weekdays") {
+            await _enableDefaultSchedule(weekdays: true);
+          } else if (mode == "weekends") {
+            await _enableDefaultSchedule(weekdays: false);
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? kPrimary : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   InputDecoration _inputDecoration({
     required String label,
