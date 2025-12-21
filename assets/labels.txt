@@ -1,8 +1,7 @@
-Chipped or Fractured Tooth
-Gingivitis
-Healthy Tooth
-Malocclusion
-Plaque and Tartar
-Tooth Caries
-Tooth Discoloration
-Tooth Erosion
+CaS
+CoS
+Gum
+MC
+OC
+OLP
+OT

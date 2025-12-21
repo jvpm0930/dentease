@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:dentease/clinic/dentease_EditmoreDetails.dart';
+import 'package:dentease/clinic/dentease_EditmoreDetailsSuccess.dart';
 import 'package:flutter/material.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; 
+import 'package:dentease/clinic/logic/resubmit_notify_listener.dart'; 
 
 class ClinicDetails extends StatefulWidget {
   final String clinicId;
@@ -16,6 +19,7 @@ class ClinicDetails extends StatefulWidget {
   @override
   State<ClinicDetails> createState() => _ClinicDetailsState();
 }
+ResubmitNotifyListener? _notifyListener;
 
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
@@ -60,7 +64,16 @@ class _ClinicDetailsState extends State<ClinicDetails> {
     super.initState();
     _fetchClinicDetails();
     _startAutoRefresh();
+
+    // NEW — Start listener
+    _notifyListener = ResubmitNotifyListener(
+      clinicId: widget.clinicId,
+      notifier: FlutterLocalNotificationsPlugin(), // uses same channel
+    );
+
+    _notifyListener!.subscribe(); // start listening to notify column
   }
+
 
   void _startAutoRefresh() {
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
@@ -73,6 +86,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
     _timer?.cancel();
     super.dispose();
   }
+
 
   Future<void> _fetchClinicDetails() async {
     try {
@@ -184,15 +198,19 @@ class _ClinicDetailsState extends State<ClinicDetails> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          backgroundColor: Colors.transparent, // <-- VISIBLE
+          elevation: 0,
+          centerTitle: true,
           title: const Text(
             "Clinic Details",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
+
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : clinicDetails == null
@@ -407,6 +425,41 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 16),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditDetailsSuccess(
+                                      clinicId: widget.clinicId,
+                                    ),
+                                  ),
+                                );
+                                if (result == true) {
+                                  _fetchClinicDetails();
+                                }
+                              }, 
+                              icon: const Icon(Icons.loop, color: Colors.white),
+                              label: const Text(
+                                "Resubmit Application",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+
                           const SizedBox(height: 16),
 
                           // Edit button

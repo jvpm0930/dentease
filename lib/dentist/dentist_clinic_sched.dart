@@ -28,8 +28,9 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
 
   bool isFetching = true;
   bool isSaving = false;
-  bool defaultNineToFiveEnabled = false;
-  String defaultScheduleMode = "off"; 
+  bool defaultEnabled = false;          // On/Off
+  String defaultScheduleMode = "weekdays"; // Current pattern (weekdays or weekends)
+
 
 
 
@@ -327,11 +328,13 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildModeButton("Off", "off"),
-                          _buildModeButton("Weekdays", "weekdays"),
-                          _buildModeButton("Weekends", "weekends"),
+                          _buildOnOffButton(), // 🔌 ON/OFF button
+                          const SizedBox(width: 8),
+                          _buildPatternButton("Weekdays", "weekdays"),
+                          _buildPatternButton("Weekends", "weekends"),
                         ],
                       ),
+
                     ],
                   ),
                 ),
@@ -680,21 +683,25 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
     );
   }
 
-
-  Widget _buildModeButton(String label, String mode) {
-    final bool isActive = (defaultScheduleMode == mode);
+  Widget _buildOnOffButton() {
+    final bool isActive = defaultEnabled;
+    final String label = isActive ? "On" : "Off";
 
     return Expanded(
       child: GestureDetector(
         onTap: () async {
-          setState(() => defaultScheduleMode = mode);
+          // toggle
+          final newState = !defaultEnabled;
+          setState(() => defaultEnabled = newState);
 
-          if (mode == "off") {
+          if (newState) {
+            // turned ON → generate schedule with current pattern
+            await _enableDefaultSchedule(
+              weekdays: defaultScheduleMode == "weekdays",
+            );
+          } else {
+            // turned OFF → delete all default 9–5 schedules
             await _disableDefaultSchedule();
-          } else if (mode == "weekdays") {
-            await _enableDefaultSchedule(weekdays: true);
-          } else if (mode == "weekends") {
-            await _enableDefaultSchedule(weekdays: false);
           }
         },
         child: Container(
@@ -716,6 +723,42 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
       ),
     );
   }
+
+  Widget _buildPatternButton(String label, String mode) {
+    final bool isActive = (defaultScheduleMode == mode);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () async {
+          // change pattern (Weekdays / Weekends) but don't turn off
+          setState(() => defaultScheduleMode = mode);
+
+          if (defaultEnabled) {
+            // if currently ON, rebuild default schedule with new pattern
+            await _disableDefaultSchedule();
+            await _enableDefaultSchedule(weekdays: mode == "weekdays");
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? kPrimary : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
 
   InputDecoration _inputDecoration({

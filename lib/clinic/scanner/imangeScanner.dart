@@ -22,16 +22,16 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   double confidence = 0.0;
   String diseaseDescription = '';
   List<Map<String, dynamic>> services = [];
+  List<Map<String, dynamic>> predictions = [];
 
   final validDiseases = const [
-    "Chipped or Fractured Tooth",
-    "Gingivitis",
-    "Healthy Tooth",
-    "Malocclusion",
-    "Plaque and Tartar",
-    "Tooth Caries",
-    "Tooth Discoloration",
-    "Tooth Erosion",
+    "CaS",
+    "CoS",
+    "Gum",
+    "MC",
+    "OC",
+    "OLP",
+    "OT",
   ];
 
   @override
@@ -65,6 +65,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       confidence = 0.0;
       diseaseDescription = '';
       services = [];
+      predictions = []; // add this
     });
 
     await _classifyImage(image.path);
@@ -80,15 +81,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     return s;
   }
 
-// 2) Classify with typical MobileNet/EfficientNet normalization
   Future<void> _classifyImage(String path) async {
     try {
       final recognitions = await Tflite.runModelOnImage(
         path: path,
-        imageMean: 127.5, // typical CNN normalization
+        imageMean: 127.5,
         imageStd: 127.5,
-        numResults: 3,
-        threshold: 0.05, // score filter before sorting
+        numResults: 3, // already >1
+        threshold: 0.05,
         asynch: true,
       );
 
@@ -97,36 +97,69 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       if (recognitions == null || recognitions.isEmpty) {
         setState(() {
           label = "No detection";
+          confidence = 0;
           diseaseDescription = "Please try again with a clearer image.";
+          predictions = [];
         });
         return;
       }
 
-      // Take top-1
-      final result = recognitions.first;
-      final detectedLabelRaw = result['label'].toString();
-      final detectedLabel = _cleanLabel(detectedLabelRaw); // <-- sanitize
-      final detectedConfidence = (result['confidence'] * 100);
+      // Clean + map results
+      final cleaned = recognitions.map<Map<String, dynamic>>((r) {
+        final rawLabel = r['label'].toString();
+        final clean = _cleanLabel(rawLabel);
+        final conf = (r['confidence'] * 100.0) as double;
+        return {
+          'label': clean,
+          'confidence': conf,
+        };
+      }).toList();
 
-      // Relax threshold to 75%
-      const minConfidence = 75.0;
+      // Only keep labels that match validDiseases (case-insensitive)
+      final validLower = validDiseases.map((e) => e.toLowerCase()).toList();
 
-      if (validDiseases
-              .map((e) => e.toLowerCase())
-              .contains(detectedLabel.toLowerCase()) &&
-          detectedConfidence >= minConfidence) {
-        setState(() {
-          label = detectedLabel;
-          confidence = detectedConfidence;
-        });
-        await _fetchDiseaseDescription(detectedLabel);
-      } else {
+      final filtered = cleaned
+          .where(
+              (p) => validLower.contains(p['label'].toString().toLowerCase()))
+          .toList()
+        ..sort((a, b) => (b['confidence'] as double)
+            .compareTo(a['confidence'] as double)); // sort by conf desc
+
+      if (filtered.isEmpty) {
         setState(() {
           label = "No Oral Problems Detected";
-          confidence = detectedConfidence;
+          confidence = 0;
+          diseaseDescription =
+              "Try again with a clearer image or better lighting.";
+          predictions = [];
+          services = [];
+        });
+        return;
+      }
+
+      // Decide main result (top-1) with min confidence threshold
+      const minConfidence = 81.0;
+      final top = filtered.first;
+      final topLabel = top['label'] as String;
+      final topConf = top['confidence'] as double;
+
+      setState(() {
+        predictions = filtered; // store all results
+        label = topLabel;
+        confidence = topConf;
+      });
+
+      if (topConf >= minConfidence) {
+        await _fetchDiseaseDescription(topLabel);
+      } else {
+        setState(() {
+          label = "Low Confidence Result";
+          confidence = 0;
           diseaseDescription =
               "Try again with a clearer image or better lighting.";
           services = [];
+          predictions =
+              []; // important: hide low-confidence predictions from UI
         });
       }
     } catch (e) {
@@ -134,6 +167,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       setState(() {
         label = "Error";
         diseaseDescription = "Failed to run model. Please try again.";
+        predictions = [];
       });
     }
   }
@@ -232,18 +266,66 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                             padding: const EdgeInsets.all(8.0),
                             child: Column(
                               children: [
-                                Text(
-                                  "Scan Result: $label",
-                                  style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                if (confidence > 0)
+                                // If we have predictions -> show main + other possible
+                                if (predictions.isNotEmpty) ...[
+                                  // MAIN RESULT
                                   Text(
-                                    "Accuracy: ${confidence.toStringAsFixed(0)}%",
-                                    style: const TextStyle(fontSize: 16),
+                                    predictions.first['label'],
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
                                   ),
+                                  Text(
+                                    "Confidence: ${predictions.first['confidence'].toStringAsFixed(0)}%",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // SECOND + THIRD PREDICTIONS ↓
+                                  if (predictions.length > 1) ...[
+                                    const Text(
+                                      "Other Possible Results:",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    ...predictions
+                                        .skip(1)
+                                        .take(2)
+                                        .map((p) => Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 4),
+                                              child: Text(
+                                                "- ${p['label']}  (${p['confidence'].toStringAsFixed(0)}%)",
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.black54,
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                              ),
+                                            )),
+                                  ],
+                                ] else ...[
+                                  // Fallback when there are no predictions (e.g., low confidence)
+                                  Text(
+                                    label.isEmpty ? "No result yet" : label,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+
                                 const SizedBox(height: 12),
                                 Card(
                                   elevation: 10,
