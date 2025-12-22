@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 
 import 'package:dentease/patients/patient_clinicv2.dart';
 import 'package:dentease/patients/patient_pagev2.dart';
 import 'package:dentease/clinic/logic/ml_inference_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

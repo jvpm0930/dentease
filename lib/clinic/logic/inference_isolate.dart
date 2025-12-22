@@ -227,7 +227,7 @@ class InferenceIsolate {
             result: flatResult,
           ));
         }
-      } catch (e, stack) {
+      } catch (e) {
         command.responsePort?.send(InferenceResponse(
           success: false,
           error: e.toString(),
