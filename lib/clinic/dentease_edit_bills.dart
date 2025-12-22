@@ -266,7 +266,7 @@ class _EditBillPageState extends State<EditBillPage> {
                                     BorderSide(color: Colors.grey.shade300),
                               ),
                             ),
-                            value: selectedPaymentMode,
+                            initialValue: selectedPaymentMode,
                             items: const [
                               DropdownMenuItem(
                                   value: 'Cash', child: Text('Cash')),

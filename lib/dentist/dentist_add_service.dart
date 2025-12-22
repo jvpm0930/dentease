@@ -143,7 +143,7 @@ class _DentistAddServiceState extends State<DentistAddService> {
 
                 /// Dropdown showing disease_name but storing disease_id
                 DropdownButtonFormField<String>(
-                  value: selectedDiseaseId,
+                  initialValue: selectedDiseaseId,
                   items: diseases
                       .map((disease) => DropdownMenuItem<String>(
                             value: disease['id'] as String, // UUID

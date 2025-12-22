@@ -187,7 +187,7 @@ class _DentistServiceDetailsPageState extends State<DentistServiceDetailsPage> {
 
                         // Status
                         DropdownButtonFormField<String>(
-                          value: serviceStatus,
+                          initialValue: serviceStatus,
                           decoration: _inputDecoration(
                               label: "Status", icon: Icons.flag),
                           items: const [

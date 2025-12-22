@@ -387,7 +387,7 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         items: items,
         onChanged: onChanged,
         validator: validatorMsg != null

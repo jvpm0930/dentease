@@ -394,7 +394,7 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: startHour,
+                              initialValue: startHour,
                               decoration: _inputDecoration(
                                 label: "Start Time",
                                 icon: Icons.schedule,
@@ -419,7 +419,7 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: endHour,
+                              initialValue: endHour,
                               decoration: _inputDecoration(
                                 label: "End Time",
                                 icon: Icons.schedule_outlined,
@@ -620,7 +620,7 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
 
                   // START TIME
                   DropdownButtonFormField<int>(
-                    value: newStart,
+                    initialValue: newStart,
                     decoration: const InputDecoration(labelText: "Start Time"),
                     items: List.generate(24, (i) => i)
                         .map((h) => DropdownMenuItem(
@@ -642,7 +642,7 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
 
                   // END TIME
                   DropdownButtonFormField<int>(
-                    value: newEnd,
+                    initialValue: newEnd,
                     decoration: const InputDecoration(labelText: "End Time"),
                     items: List.generate(23 - newStart, (i) => newStart + 1 + i)
                         .map((h) => DropdownMenuItem(
