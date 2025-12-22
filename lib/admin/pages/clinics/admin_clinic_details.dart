@@ -199,7 +199,7 @@ class _AdmClinicDetailsPageState extends State<AdmClinicDetailsPage> {
                                 children: [
                                   Expanded(
                                     child: DropdownButtonFormField<String>(
-                                      value: selectedStatus,
+                                      initialValue: selectedStatus,
                                       items: const [
                                         DropdownMenuItem(
                                           value: 'pending',

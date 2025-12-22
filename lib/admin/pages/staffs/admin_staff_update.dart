@@ -114,7 +114,7 @@ class _AdmEditStaffPageState extends State<AdmEditStaffPage> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: ['staff', 'user'].contains(selectedRole)
+                      initialValue: ['staff', 'user'].contains(selectedRole)
                           ? selectedRole
                           : 'user',
                       items: ['staff', 'user']

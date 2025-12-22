@@ -342,7 +342,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              value: selectedPaymentMode,
+                              initialValue: selectedPaymentMode,
                               items: paymentModes
                                   .map(
                                     (mode) => DropdownMenuItem(

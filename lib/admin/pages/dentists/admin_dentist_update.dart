@@ -117,7 +117,7 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: ['admin', 'user'].contains(selectedRole)
+                      initialValue: ['admin', 'user'].contains(selectedRole)
                           ? selectedRole
                           : 'user',
                       items: ['admin', 'user']

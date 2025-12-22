@@ -143,7 +143,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: genderController.text.isNotEmpty ? genderController.text : null,
+                      initialValue: genderController.text.isNotEmpty ? genderController.text : null,
                       decoration: InputDecoration(
                         hintText: 'Gender',
                         prefixIcon: const Padding(
