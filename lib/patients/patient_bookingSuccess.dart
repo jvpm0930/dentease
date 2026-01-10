@@ -1,6 +1,7 @@
 import 'dart:ui';
-import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class PatientBookingSuccess extends StatefulWidget {
   const PatientBookingSuccess({super.key});
@@ -15,7 +16,7 @@ class _PatientBookingSuccessState extends State<PatientBookingSuccess>
   late final Animation<double> _scale;
   late final Animation<double> _fade;
 
-  static const Color kPrimary = Color(0xFF103D7E);
+  static const Color kPrimary = AppTheme.primaryBlue;
 
   @override
   void initState() {
@@ -41,81 +42,79 @@ class _PatientBookingSuccessState extends State<PatientBookingSuccess>
 
   @override
   Widget build(BuildContext context) {
-    return BackgroundCont(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: _GlassCard(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ScaleTransition(
-                      scale: _scale,
-                      child: Container(
-                        height: 96,
-                        width: 96,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF2ECC71), Color(0xFF27AE60)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: _GlassCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ScaleTransition(
+                    scale: _scale,
+                    child: Container(
+                      height: 96,
+                      width: 96,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF2ECC71), Color(0xFF27AE60)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x3327AE60),
+                            blurRadius: 18,
+                            offset: Offset(0, 6),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x3327AE60),
-                              blurRadius: 18,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.check_rounded,
-                            color: Colors.white, size: 56),
+                        ],
+                      ),
+                      child: const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 56),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FadeTransition(
+                    opacity: _fade,
+                    child: const Text(
+                      'Appointment Confirmed',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    FadeTransition(
-                      opacity: _fade,
-                      child: const Text(
-                        'Appointment Confirmed',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  FadeTransition(
+                    opacity: _fade,
+                    child: const Text(
+                      'Your appointment has been booked successfully.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    FadeTransition(
-                      opacity: _fade,
-                      child: const Text(
-                        'Your appointment has been booked successfully.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          color: Colors.black54,
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _PillButton.filled(
+                          label: 'Done',
+                          onTap: _backToHome,
+                          background: kPrimary,
+                          foreground: Colors.white,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 22),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _PillButton.filled(
-                            label: 'Done',
-                            onTap: _backToHome,
-                            background: kPrimary,
-                            foreground: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -139,7 +138,7 @@ class _GlassCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.90),
+            color: Colors.white.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(20),
             boxShadow: const [
               BoxShadow(
@@ -148,7 +147,8 @@ class _GlassCard extends StatelessWidget {
                 offset: Offset(0, 8),
               ),
             ],
-            border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6), width: 1),
           ),
           child: child,
         ),
@@ -214,7 +214,7 @@ class _PillButton extends StatelessWidget {
         borderRadius: radius,
         child: Ink(
           decoration: BoxDecoration(
-            color: filled ? background : Colors.white.withOpacity(0.85),
+            color: filled ? background : Colors.white.withValues(alpha: 0.85),
             borderRadius: radius,
             border: filled
                 ? null

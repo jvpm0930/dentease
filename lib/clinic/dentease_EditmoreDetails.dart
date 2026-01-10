@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dentease/clinic/dentease_locationPick.dart';
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,7 +22,6 @@ class EditClinicDetails extends StatefulWidget {
 
 class _EditClinicDetailsState extends State<EditClinicDetails> {
   final supabase = Supabase.instance.client;
-  static const Color kPrimary = Color(0xFF103D7E);
 
   late TextEditingController clinicNameController;
   late TextEditingController phoneController;
@@ -341,7 +341,7 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
                 child: ElevatedButton(
                   onPressed: _updateClinicDetails,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
+                    backgroundColor: AppTheme.primaryBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -423,12 +423,12 @@ class _EditClinicDetailsState extends State<EditClinicDetails> {
       labelText: label,
       filled: true,
       fillColor: Colors.white,
-      prefixIcon: icon != null ? Icon(icon, color: kPrimary) : null,
+      prefixIcon: icon != null ? Icon(icon, color: AppTheme.primaryBlue) : null,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: AppTheme.dividerColor),
       ),
     );
   }
@@ -444,16 +444,10 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: child,
     );
@@ -467,15 +461,14 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF103D7E);
     return Row(
       children: [
-        Icon(icon, color: color),
+        Icon(icon, color: AppTheme.primaryBlue),
         const SizedBox(width: 8),
         Text(
           title,
           style: const TextStyle(
-            color: Colors.black87,
+            color: AppTheme.textDark,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -498,14 +491,13 @@ class _DocRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const kPrimary = Color(0xFF103D7E);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: const TextStyle(
-              fontWeight: FontWeight.w700, color: Colors.black87),
+              fontWeight: FontWeight.w700, color: AppTheme.textDark),
         ),
         const SizedBox(height: 8),
         preview,
@@ -517,8 +509,8 @@ class _DocRow extends StatelessWidget {
             icon: const Icon(Icons.upload_file),
             label: const Text('Change'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: kPrimary,
-              side: const BorderSide(color: kPrimary),
+              foregroundColor: AppTheme.primaryBlue,
+              side: const BorderSide(color: AppTheme.primaryBlue),
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),

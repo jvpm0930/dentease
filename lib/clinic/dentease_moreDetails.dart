@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:dentease/clinic/dentease_EditmoreDetails.dart';
 import 'package:dentease/clinic/dentease_EditmoreDetailsSuccess.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; 
-import 'package:dentease/clinic/logic/resubmit_notify_listener.dart'; 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:dentease/clinic/logic/resubmit_notify_listener.dart';
 
 class ClinicDetails extends StatefulWidget {
   final String clinicId;
@@ -19,6 +20,7 @@ class ClinicDetails extends StatefulWidget {
   @override
   State<ClinicDetails> createState() => _ClinicDetailsState();
 }
+
 ResubmitNotifyListener? _notifyListener;
 
 class FullScreenImage extends StatelessWidget {
@@ -52,7 +54,6 @@ class FullScreenImage extends StatelessWidget {
 
 class _ClinicDetailsState extends State<ClinicDetails> {
   final supabase = Supabase.instance.client;
-  final Color kPrimary = const Color(0xFF103D7E);
 
   Map<String, dynamic>? clinicDetails;
   bool isLoading = true;
@@ -74,7 +75,6 @@ class _ClinicDetailsState extends State<ClinicDetails> {
     _notifyListener!.subscribe(); // start listening to notify column
   }
 
-
   void _startAutoRefresh() {
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _fetchClinicDetails();
@@ -86,7 +86,6 @@ class _ClinicDetailsState extends State<ClinicDetails> {
     _timer?.cancel();
     super.dispose();
   }
-
 
   Future<void> _fetchClinicDetails() async {
     try {
@@ -144,16 +143,16 @@ class _ClinicDetailsState extends State<ClinicDetails> {
     Color bg;
     Color fg;
     if (s == 'approved' || s == 'active') {
-      bg = Colors.green.withOpacity(0.12);
+      bg = Colors.green.withValues(alpha: 0.12);
       fg = Colors.green.shade800;
     } else if (s == 'pending' || s == 'in-review') {
-      bg = Colors.orange.withOpacity(0.12);
+      bg = Colors.orange.withValues(alpha: 0.12);
       fg = Colors.orange.shade800;
     } else if (s == 'rejected' || s == 'inactive') {
-      bg = Colors.red.withOpacity(0.12);
+      bg = Colors.red.withValues(alpha: 0.12);
       fg = Colors.red.shade800;
     } else {
-      bg = Colors.grey.withOpacity(0.12);
+      bg = Colors.grey.withValues(alpha: 0.12);
       fg = Colors.black87;
     }
 
@@ -162,7 +161,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fg.withOpacity(0.25)),
+        border: Border.all(color: fg.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -210,7 +209,6 @@ class _ClinicDetailsState extends State<ClinicDetails> {
           ),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : clinicDetails == null
@@ -224,8 +222,8 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                     onRefresh: _fetchClinicDetails,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                       child: Column(
                         children: [
                           // Basic Info
@@ -236,7 +234,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                 _SectionTitle(
                                     icon: Icons.info_rounded,
                                     title: 'Basic Info',
-                                    color: kPrimary),
+                                    color: AppTheme.primaryBlue),
                                 const SizedBox(height: 10),
                                 _InfoRow(
                                   label: 'Status',
@@ -270,7 +268,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                 _SectionTitle(
                                     icon: Icons.location_on_rounded,
                                     title: 'Address',
-                                    color: kPrimary),
+                                    color: AppTheme.primaryBlue),
                                 const SizedBox(height: 10),
                                 Text(
                                   address,
@@ -292,8 +290,8 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                         ),
                                         markers: {
                                           Marker(
-                                            markerId:
-                                                const MarkerId('clinicLocation'),
+                                            markerId: const MarkerId(
+                                                'clinicLocation'),
                                             position: LatLng(lat, lng),
                                           ),
                                         },
@@ -316,7 +314,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                 _SectionTitle(
                                     icon: Icons.assignment_turned_in_rounded,
                                     title: 'Credentials & Permits',
-                                    color: kPrimary),
+                                    color: AppTheme.primaryBlue),
                                 const SizedBox(height: 12),
 
                                 // PRC
@@ -334,14 +332,15 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              FullScreenImage(imageUrl: licenseUrl),
+                                          builder: (_) => FullScreenImage(
+                                              imageUrl: licenseUrl),
                                         ),
                                       );
                                     },
                                   )
                                 else
-                                  const _DocEmpty(text: "No PRC license image available."),
+                                  const _DocEmpty(
+                                      text: "No PRC license image available."),
                                 const SizedBox(height: 16),
 
                                 // DTI
@@ -359,14 +358,15 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              FullScreenImage(imageUrl: permitUrl),
+                                          builder: (_) => FullScreenImage(
+                                              imageUrl: permitUrl),
                                         ),
                                       );
                                     },
                                   )
                                 else
-                                  const _DocEmpty(text: "No DTI Permit image available."),
+                                  const _DocEmpty(
+                                      text: "No DTI Permit image available."),
                                 const SizedBox(height: 16),
 
                                 // Workplace
@@ -384,14 +384,15 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              FullScreenImage(imageUrl: officeUrl),
+                                          builder: (_) => FullScreenImage(
+                                              imageUrl: officeUrl),
                                         ),
                                       );
                                     },
                                   )
                                 else
-                                  const _DocEmpty(text: "No Workplace image available."),
+                                  const _DocEmpty(
+                                      text: "No Workplace image available."),
                               ],
                             ),
                           ),
@@ -405,7 +406,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                 _SectionTitle(
                                   icon: Icons.notes_rounded,
                                   title: 'Clinic Info',
-                                  color: kPrimary,
+                                  color: AppTheme.primaryBlue,
                                 ),
                                 const SizedBox(height: 10),
                                 Container(
@@ -419,7 +420,8 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                   ),
                                   child: Text(
                                     (info.isNotEmpty) ? info : 'N/A',
-                                    style: const TextStyle(color: Colors.black87),
+                                    style:
+                                        const TextStyle(color: Colors.black87),
                                   ),
                                 ),
                               ],
@@ -442,7 +444,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                 if (result == true) {
                                   _fetchClinicDetails();
                                 }
-                              }, 
+                              },
                               icon: const Icon(Icons.loop, color: Colors.white),
                               label: const Text(
                                 "Resubmit Application",
@@ -486,7 +488,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                                 style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: kPrimary,
+                                backgroundColor: AppTheme.primaryBlue,
                                 foregroundColor: Colors.white,
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 14),
@@ -516,16 +518,10 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: child,
     );
@@ -539,7 +535,7 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle({
     required this.icon,
     required this.title,
-    this.color = const Color(0xFF103D7E),
+    this.color = AppTheme.primaryBlue,
   });
 
   @override
@@ -551,7 +547,7 @@ class _SectionTitle extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            color: Colors.black87,
+            color: AppTheme.textDark,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -627,7 +623,8 @@ class _DocImageTile extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               return const Center(
-                child: Icon(Icons.broken_image, color: Colors.black45, size: 32),
+                child:
+                    Icon(Icons.broken_image, color: Colors.black45, size: 32),
               );
             },
           ),

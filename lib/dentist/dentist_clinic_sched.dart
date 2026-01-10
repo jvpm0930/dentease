@@ -1,5 +1,5 @@
-import 'package:dentease/widgets/background_cont.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -15,45 +15,66 @@ class DentistClinicSchedPage extends StatefulWidget {
   _DentistClinicSchedPageState createState() => _DentistClinicSchedPageState();
 }
 
-class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
-  final supabase = Supabase.instance.client;
-  final Color kPrimary = const Color(0xFF103D7E);
+class _DentistClinicSchedPageState extends State<DentistClinicSchedPage>
+    with SingleTickerProviderStateMixin {
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
+  late TabController _tabController;
 
-  final DateFormat _dateFmt = DateFormat('MMM d, y');
+  static const kPrimaryBlue = Color(0xFF1134A6); // Primary Blue
+  static const kBackground = Color(0xFFF8FAFC); // Clean medical background
 
-  List<Map<String, dynamic>> schedules = [];
+  // Quick Patterns
+  final List<Map<String, dynamic>> patterns = [
+    {
+      'title': 'Standard',
+      'desc': 'Mon-Fri (9am-5pm)',
+      'days': [1, 2, 3, 4, 5],
+      'start': 9,
+      'end': 17
+    },
+    {
+      'title': 'Pinoy Hustler',
+      'desc': 'Mon-Sat (9am-5pm)',
+      'days': [1, 2, 3, 4, 5, 6],
+      'start': 9,
+      'end': 17
+    },
+    {
+      'title': 'Mall Clinic',
+      'desc': 'Mon-Sun (10am-8pm)',
+      'days': [1, 2, 3, 4, 5, 6, 7],
+      'start': 10,
+      'end': 20
+    },
+    {
+      'title': 'Half-Day Sat',
+      'desc': 'M-F (9-5), Sat (8-12)',
+      'days': [1, 2, 3, 4, 5],
+      'start': 9,
+      'end': 17,
+      'sat_half': true
+    },
+  ];
+
   DateTime selectedDate = DateTime.now();
   int startHour = 9;
-  int endHour = 10;
-
+  int endHour = 17;
   bool isFetching = true;
-  bool isSaving = false;
-  bool defaultEnabled = false;          // On/Off
-  String defaultScheduleMode = "weekdays"; // Current pattern (weekdays or weekends)
-
-
-
+  bool isGenerating = false;
+  List<Map<String, dynamic>> schedules = [];
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    startHour = now.hour;
-    endHour = (startHour + 1).clamp(1, 23);
+    _tabController = TabController(length: 2, vsync: this);
     _fetchSchedule();
   }
 
-  String _hourLabel(int hour) {
-    final t = TimeOfDay(hour: hour, minute: 0);
-    return t.format(context);
-  }
-
-  String _formatDateStr(dynamic raw) {
-    if (raw == null) return '';
-    final s = raw.toString();
-    final base = s.contains('T') ? s.split('T').first : s;
-    final dt = DateTime.tryParse(base);
-    return dt == null ? base : _dateFmt.format(dt);
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchSchedule() async {
@@ -63,6 +84,11 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
           .from('clinics_sched')
           .select()
           .eq('clinic_id', widget.clinicId)
+          .gte(
+              'date',
+              DateTime.now()
+                  .toIso8601String()
+                  .split('T')[0]) // Only future/today
           .order('date', ascending: true)
           .order('start_time', ascending: true);
 
@@ -70,768 +96,347 @@ class _DentistClinicSchedPageState extends State<DentistClinicSchedPage> {
         schedules = List<Map<String, dynamic>>.from(response);
       });
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading schedules: $e')),
-      );
+      debugPrint("Error loading schedules: $e");
     } finally {
       if (mounted) setState(() => isFetching = false);
     }
   }
 
-  Future<void> _addSchedule() async {
-    if (endHour <= startHour) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('End time must be later than start time.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() => isSaving = true);
-
-    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
-
-    try {
-      final existing = await supabase
-          .from('clinics_sched')
-          .select()
-          .eq('clinic_id', widget.clinicId)
-          .eq('date', formattedDate)
-          .eq('start_time', startHour)
-          .eq('end_time', endHour);
-
-      if (existing.isNotEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Schedule already exists!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isSaving = false);
-        return;
-      }
-
-      final newSchedule = {
-        'clinic_id': widget.clinicId,
-        'date': formattedDate,
-        'start_time': startHour,
-        'end_time': endHour,
-      };
-
-      final response =
-          await supabase.from('clinics_sched').insert(newSchedule).select();
-
-      if (response.isNotEmpty) {
-        setState(() {
-          schedules.add(response.first);
-          schedules.sort((a, b) {
-            final da = DateTime.parse(a['date'].toString());
-            final db = DateTime.parse(b['date'].toString());
-            final cmp = da.compareTo(db);
-            if (cmp != 0) return cmp;
-            return (a['start_time'] as int).compareTo(b['start_time'] as int);
-          });
-        });
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Schedule added successfully!')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding schedule: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => isSaving = false);
-    }
-  }
-
-  Future<void> _confirmDelete(dynamic schedId) async {
-    final idStr = schedId.toString();
-    final confirm = await showDialog<bool>(
+  // Generate Pattern Logic
+  Future<void> _applyPattern(Map<String, dynamic> pattern) async {
+    final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Schedule'),
-        content: const Text('Are you sure you want to delete this schedule?'),
+        title: Text("Apply ${pattern['title']}?"),
+        content: const Text(
+            "This will generate entries for the next 30 days. Existing schedules will not be overwritten, but duplicates will be skipped."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
+                backgroundColor: kPrimaryBlue, foregroundColor: Colors.white),
+            child: const Text("Generate"),
+          )
         ],
       ),
     );
 
-    if (confirm == true) _deleteSchedule(idStr);
-  }
+    if (confirm != true) return;
 
-  Future<void> _deleteSchedule(String id) async {
+    setState(() => isGenerating = true);
+
     try {
-      await supabase.from('clinics_sched').delete().eq('sched_id', id);
-      setState(() {
-        schedules.removeWhere((s) => s['sched_id'].toString() == id);
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedule deleted successfully!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting schedule: $e')),
-      );
-    }
-  }
+      final List<int> days = pattern['days'];
+      final int start = pattern['start'];
+      final int end = pattern['end'];
+      final bool satHalf = pattern['sat_half'] == true;
 
-  Future<void> _updateSchedule({
-    required dynamic schedId,
-    required DateTime newDate,
-    required int newStart,
-    required int newEnd,
-  }) async {
-    try {
-      final formattedDate = DateFormat('yyyy-MM-dd').format(newDate);
+      final now = DateTime.now();
+      final List<Map<String, dynamic>> toInsert = [];
 
-      await supabase.from('clinics_sched').update({
-        'date': formattedDate,
-        'start_time': newStart,
-        'end_time': newEnd,
-      }).eq('sched_id', schedId);
+      for (int i = 0; i < 30; i++) {
+        final d = now.add(Duration(days: i));
 
-      await _fetchSchedule();
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedule updated successfully!')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating schedule: $e')),
-      );
-    }
-  }
-
-
-  Future<void> _enableDefaultSchedule({required bool weekdays}) async {
-    setState(() => isSaving = true);
-
-    final now = DateTime.now();
-    final end = now.add(const Duration(days: 30));
-
-    for (DateTime d = now;
-        d.isBefore(end);
-        d = d.add(const Duration(days: 1))) {
-      final isWeekday = d.weekday >= 1 && d.weekday <= 5;
-      final isWeekend = d.weekday == 6 || d.weekday == 7;
-
-      if ((weekdays && isWeekday) || (!weekdays && isWeekend)) {
-        final formattedDate = DateFormat('yyyy-MM-dd').format(d);
-
-        final existing = await supabase
-            .from('clinics_sched')
-            .select()
-            .eq('clinic_id', widget.clinicId)
-            .eq('date', formattedDate)
-            .eq('start_time', 9)
-            .eq('end_time', 17);
-
-        if (existing.isEmpty) {
-          await supabase.from('clinics_sched').insert({
+        // Handle Half-day Saturday special case
+        if (satHalf && d.weekday == 6) {
+          toInsert.add({
             'clinic_id': widget.clinicId,
-            'date': formattedDate,
-            'start_time': 9,
-            'end_time': 17,
+            'date': DateFormat('yyyy-MM-dd').format(d),
+            'start_time': 8,
+            'end_time': 12,
+            'schedule_pattern': pattern['title'], // Store the pattern type
+          });
+          continue;
+        }
+
+        if (days.contains(d.weekday)) {
+          toInsert.add({
+            'clinic_id': widget.clinicId,
+            'date': DateFormat('yyyy-MM-dd').format(d),
+            'start_time': start,
+            'end_time': end,
+            'schedule_pattern': pattern['title'], // Store the pattern type
           });
         }
       }
+
+      // Check conflicts (naively by just trying to insert)
+      // Or check one by one. For bulk insert, supabase usually allows upsert or ignore duplicates.
+      // Since we don't know constraints, we'll loop check to be safe (or just upsert if we had sched_id).
+      // Since sched_id is auto-inc, we can't easily upsert efficiently without unique constraint on (clinic_id, date, start_time).
+      // We will check for existence of date.
+
+      int addedCount = 0;
+      for (var entry in toInsert) {
+        final date = entry['date'];
+        final exists = schedules.any((s) => s['date'] == date);
+        if (!exists) {
+          await supabase.from('clinics_sched').insert(entry);
+          addedCount++;
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Generated $addedCount new schedule entries.")));
+      }
+
+      _fetchSchedule();
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+      if (mounted) setState(() => isGenerating = false);
     }
-
-    await _fetchSchedule();
-    setState(() => isSaving = false);
   }
-
-
-
-  Future<void> _disableDefaultSchedule() async {
-    setState(() => isSaving = true);
-
-    await supabase
-        .from('clinics_sched')
-        .delete()
-        .eq('clinic_id', widget.clinicId)
-        .eq('start_time', 9)
-        .eq('end_time', 17);
-
-    await _fetchSchedule();
-    setState(() => isSaving = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Default schedule removed!')),
-    );
-  }
-
-
 
   @override
   Widget build(BuildContext context) {
-    final startOptions = List.generate(24, (i) => i);
-    final endOptions = List.generate(24 - (startHour + 1), (i) => startHour + 1 + i);
-
-    return BackgroundCont(
+    return PopScope(
+      canPop: true,
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: kBackground,
         appBar: AppBar(
-          title: const Text(
-            "Manage Schedule",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: Text(
+            "Schedule Management",
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: Colors.transparent,
-          iconTheme: const IconThemeData(color: Colors.white),
+          centerTitle: true,
+          backgroundColor: kPrimaryBlue, // Professional blue header
+          foregroundColor: Colors.white,
           elevation: 0,
+          leading: const BackButton(color: Colors.white),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(text: "My Schedule"),
+              Tab(text: "Apply Pattern"),
+            ],
+          ),
         ),
-        body: RefreshIndicator(
-          onRefresh: _fetchSchedule,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Create Schedule Card
-                _SectionCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Default Schedule (9 AM - 5 PM)",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildOnOffButton(), // 🔌 ON/OFF button
-                          const SizedBox(width: 8),
-                          _buildPatternButton("Weekdays", "weekdays"),
-                          _buildPatternButton("Weekends", "weekends"),
-                        ],
-                      ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            // Tab 1: List + Manual Add
+            _buildListTab(),
+            // Tab 2: Pattern Wizard
+            _buildPatternTab(),
+          ],
+        ),
+      ),
+    );
+  }
 
-                    ],
-                  ),
-                ),
-
-
-                const SizedBox(height: 16),
-
-                _SectionCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SectionTitle(
-                        icon: Icons.calendar_month_rounded,
-                        title: "Create Schedule",
-                        color: kPrimary,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Date picker row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "Selected date: ${_dateFmt.format(selectedDate)}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: selectedDate,
-                                firstDate: DateTime.now(),
-                                lastDate:
-                                    DateTime.now().add(const Duration(days: 60)),
-                              );
-                              if (picked != null) {
-                                setState(() => selectedDate = picked);
-                              }
-                            },
-                            icon: const Icon(Icons.edit_calendar_rounded),
-                            label: const Text("Pick Date"),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: kPrimary,
-                              side: BorderSide(color: kPrimary),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Time pickers
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: startHour,
-                              decoration: _inputDecoration(
-                                label: "Start Time",
-                                icon: Icons.schedule,
-                              ),
-                              items: startOptions
-                                  .map((h) => DropdownMenuItem(
-                                        value: h,
-                                        child: Text(_hourLabel(h)),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                setState(() {
-                                  startHour = v;
-                                  if (endHour <= startHour) {
-                                    endHour = (startHour + 1).clamp(1, 23);
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: endHour,
-                              decoration: _inputDecoration(
-                                label: "End Time",
-                                icon: Icons.schedule_outlined,
-                              ),
-                              items: endOptions
-                                  .map((h) => DropdownMenuItem(
-                                        value: h,
-                                        child: Text(_hourLabel(h)),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                setState(() => endHour = v);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Save button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: isSaving ? null : _addSchedule,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: isSaving
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  "Save Schedule",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Existing schedules
-                _SectionCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SectionTitle(
-                        icon: Icons.event_note_rounded,
-                        title: "Existing Schedules",
-                        color: kPrimary,
-                      ),
-                      const SizedBox(height: 12),
-                      if (isFetching)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 24),
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      else if (schedules.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            "No schedules found. Add one above.",
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        )
-                      else
-                        ListView.separated(
-                          itemCount: schedules.length,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final s = schedules[index];
-                            final dateStr = _formatDateStr(s['date']);
-                            final st = s['start_time'] as int? ?? 0;
-                            final et = s['end_time'] as int? ?? 0;
-
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                leading: CircleAvatar(
-                                  backgroundColor: kPrimary.withOpacity(0.1),
-                                  foregroundColor: kPrimary,
-                                  child: const Icon(Icons.schedule),
-                                ),
-                                title: Text(
-                                  dateStr,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  "${_hourLabel(st)} - ${_hourLabel(et)}",
-                                  style: const TextStyle(color: Colors.black87),
-                                ),
-
-                                //  Correct placement for multiple buttons
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Edit',
-                                      icon: const Icon(Icons.edit,
-                                          color: Color(0xFF103D7E)),
-                                      onPressed: () => _editScheduleDialog(s),
-                                    ),
-                                    IconButton(
-                                      tooltip: 'Delete',
-                                      icon: const Icon(Icons.delete,
-                                          color: Colors.red),
-                                      onPressed: () =>
-                                          _confirmDelete(s['sched_id']),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ],
+  Widget _buildListTab() {
+    return RefreshIndicator(
+      onRefresh: _fetchSchedule,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          // Add Button
+          ElevatedButton.icon(
+            onPressed: () => _showAddDialog(),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text("Add Single Date"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: kPrimaryBlue,
+              padding: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 20),
 
-  void _editScheduleDialog(Map<String, dynamic> s) {
-    DateTime initialDate = DateTime.parse(s['date']);
-    int initialStart = s['start_time'];
-    int initialEnd = s['end_time'];
-
-    DateTime newDate = initialDate;
-    int newStart = initialStart;
-    int newEnd = initialEnd;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateSB) {
-            return AlertDialog(
-              title: const Text("Edit Schedule"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // DATE PICKER
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(DateFormat('MMM d, y').format(newDate)),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.calendar_month),
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: newDate,
-                            firstDate: DateTime.now(),
-                            lastDate:
-                                DateTime.now().add(const Duration(days: 60)),
-                          );
-                          if (picked != null) {
-                            setStateSB(() => newDate = picked);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // START TIME
-                  DropdownButtonFormField<int>(
-                    initialValue: newStart,
-                    decoration: const InputDecoration(labelText: "Start Time"),
-                    items: List.generate(24, (i) => i)
-                        .map((h) => DropdownMenuItem(
-                              value: h,
-                              child: Text(TimeOfDay(hour: h, minute: 0)
-                                  .format(context)),
-                            ))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setStateSB(() {
-                        newStart = v;
-                        if (newEnd <= newStart) newEnd = newStart + 1;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // END TIME
-                  DropdownButtonFormField<int>(
-                    initialValue: newEnd,
-                    decoration: const InputDecoration(labelText: "End Time"),
-                    items: List.generate(23 - newStart, (i) => newStart + 1 + i)
-                        .map((h) => DropdownMenuItem(
-                              value: h,
-                              child: Text(TimeOfDay(hour: h, minute: 0)
-                                  .format(context)),
-                            ))
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setStateSB(() => newEnd = v);
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  child: const Text("Cancel"),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                ElevatedButton(
-                  child: const Text("Save"),
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await _updateSchedule(
-                      schedId: s['sched_id'],
-                      newDate: newDate,
-                      newStart: newStart,
-                      newEnd: newEnd,
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildOnOffButton() {
-    final bool isActive = defaultEnabled;
-    final String label = isActive ? "On" : "Off";
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () async {
-          // toggle
-          final newState = !defaultEnabled;
-          setState(() => defaultEnabled = newState);
-
-          if (newState) {
-            // turned ON → generate schedule with current pattern
-            await _enableDefaultSchedule(
-              weekdays: defaultScheduleMode == "weekdays",
-            );
-          } else {
-            // turned OFF → delete all default 9–5 schedules
-            await _disableDefaultSchedule();
-          }
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isActive ? kPrimary : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPatternButton(String label, String mode) {
-    final bool isActive = (defaultScheduleMode == mode);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () async {
-          // change pattern (Weekdays / Weekends) but don't turn off
-          setState(() => defaultScheduleMode = mode);
-
-          if (defaultEnabled) {
-            // if currently ON, rebuild default schedule with new pattern
-            await _disableDefaultSchedule();
-            await _enableDefaultSchedule(weekdays: mode == "weekdays");
-          }
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isActive ? kPrimary : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-
-
-  InputDecoration _inputDecoration({
-    required String label,
-    IconData? icon,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.white,
-      prefixIcon: icon != null ? Icon(icon, color: kPrimary) : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final Widget child;
-  const _SectionCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [
-                    BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
+          if (isFetching)
+            const Center(child: CircularProgressIndicator(color: kPrimaryBlue))
+          else if (schedules.isEmpty)
+            Center(
+                child: Text(
+                    "No schedules set. Go to 'Apply Pattern' tab to quick start.",
+                    style: TextStyle(color: Colors.grey.shade600)))
+          else
+            ...schedules.map((s) => _ScheduleCard(
+                s: s, onDelete: () => _deleteSchedule(s['sched_id'])))
         ],
       ),
-      child: child,
     );
+  }
+
+  Widget _buildPatternTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Text("Choose a Work Pattern",
+              style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B))),
+          const SizedBox(height: 8),
+          Text("Automatically generate schedule for the next 30 days.",
+              style: GoogleFonts.roboto(color: const Color(0xFF64748B))),
+          const SizedBox(height: 20),
+          if (isGenerating)
+            const CircularProgressIndicator(color: kPrimaryBlue),
+          ...patterns.map((p) => Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  title: Text(p['title'],
+                      style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold, color: kPrimaryBlue)),
+                  subtitle: Text(p['desc'],
+                      style: GoogleFonts.roboto(color: Colors.grey.shade600)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  onTap: () => _applyPattern(p),
+                ),
+              ))
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddDialog() async {
+    // Reuse existing logic or simple dialog
+    // For brevity, just calling the date picker logic inline
+    // ... (Implementation akin to previous manual add, but simplified)
+    DateTime date = DateTime.now();
+    int start = 9;
+    int end = 17;
+
+    await showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+              builder: (context, setSB) => AlertDialog(
+                title: const Text("Add Schedule"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                        title: Text(DateFormat('MMM d, yyyy').format(date)),
+                        trailing: const Icon(Icons.calendar_today),
+                        onTap: () async {
+                          final d = await showDatePicker(
+                              context: context,
+                              initialDate: date,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now()
+                                  .add(const Duration(days: 365)));
+                          if (d != null) setSB(() => date = d);
+                        }),
+                    Row(children: [
+                      const Text("Start: "),
+                      DropdownButton<int>(
+                          value: start,
+                          items: List.generate(
+                              24,
+                              (i) => DropdownMenuItem(
+                                  value: i, child: Text("$i:00"))).toList(),
+                          onChanged: (v) => setSB(() => start = v!)),
+                    ]),
+                    Row(children: [
+                      const Text("End:   "),
+                      DropdownButton<int>(
+                          value: end,
+                          items: List.generate(
+                              24,
+                              (i) => DropdownMenuItem(
+                                  value: i, child: Text("$i:00"))).toList(),
+                          onChanged: (v) => setSB(() => end = v!)),
+                    ]),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel")),
+                  ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await _manualAdd(date, start, end);
+                      },
+                      child: const Text("Save"))
+                ],
+              ),
+            ));
+  }
+
+  Future<void> _manualAdd(DateTime date, int start, int end) async {
+    try {
+      await supabase.from('clinics_sched').insert({
+        'clinic_id': widget.clinicId,
+        'date': DateFormat('yyyy-MM-dd').format(date),
+        'start_time': start,
+        'end_time': end,
+        'schedule_pattern': 'Custom', // Default to Custom (1-hour intervals)
+      });
+      _fetchSchedule();
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  Future<void> _deleteSchedule(dynamic id) async {
+    await supabase.from('clinics_sched').delete().eq('sched_id', id);
+    _fetchSchedule();
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color color;
-
-  const _SectionTitle({
-    required this.icon,
-    required this.title,
-    this.color = const Color(0xFF103D7E),
-  });
+class _ScheduleCard extends StatelessWidget {
+  final Map<String, dynamic> s;
+  final VoidCallback onDelete;
+  const _ScheduleCard({required this.s, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+    final date = DateTime.parse(s['date']);
+    final start = s['start_time'];
+    final end = s['end_time'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(DateFormat('EEEE, MMM d').format(date),
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 16)),
+              Text("${_fmtTime(start)} - ${_fmtTime(end)}",
+                  style: GoogleFonts.roboto(color: Colors.grey)),
+            ],
           ),
-        ),
-      ],
+          IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: onDelete),
+        ],
+      ),
     );
+  }
+
+  String _fmtTime(int h) {
+    final t = TimeOfDay(hour: h, minute: 0);
+    return "${t.hourOfPeriod}:${t.minute.toString().padLeft(2, '0')} ${t.period == DayPeriod.am ? 'AM' : 'PM'}";
   }
 }

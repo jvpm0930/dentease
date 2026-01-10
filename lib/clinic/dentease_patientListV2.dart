@@ -1,5 +1,6 @@
 import 'package:dentease/clinic/dentease_booking_details.dart';
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -31,7 +32,6 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchBookings() async {
-
     // Now fetch all bookings that match patient_id + clinic_id
     final response = await supabase
         .from('bookings')
@@ -45,7 +45,6 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
 
     return List<Map<String, dynamic>>.from(response);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -109,14 +108,15 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: booking['status'] == 'approved'
-                                      ? const Color(0xFF103D7E)
+                                      ? AppTheme.primaryBlue
                                       : booking['status'] == 'pending'
-                                          ? Colors.black
+                                          ? AppTheme.textDark
                                           : (booking['status'] == 'rejected' ||
                                                   booking['status'] ==
                                                       'cancelled')
-                                              ? Colors.red
-                                              : Colors.green, // default fallback
+                                              ? AppTheme.errorColor
+                                              : AppTheme
+                                                  .successColor, // default fallback
                                 ),
                               ),
                             ],
@@ -135,7 +135,8 @@ class _DentistBookingPatientPageState extends State<DentistBookingPatientPage> {
                             },
                             child: const Padding(
                               padding: EdgeInsets.only(right: 10),
-                              child: Icon(Icons.info, color: Color(0xFF103D7E)),
+                              child:
+                                  Icon(Icons.info, color: AppTheme.primaryBlue),
                             ),
                           ),
                         ),

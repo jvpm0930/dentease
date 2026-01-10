@@ -33,33 +33,56 @@ class _AdminHeaderState extends State<AdminHeader> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.logout, color: Color(0xFF1134A6)),
+              SizedBox(width: 8),
+              Text('Confirm Logout'),
+            ],
+          ),
           content: const Text('Are you sure you want to log out?'),
           actions: [
             TextButton(
-              child: const Text('Cancel'),
               onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
-              child: const Text('Logout'),
               onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1134A6),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Logout'),
             ),
           ],
         ),
       );
 
-      if (confirm == true) {
+      if (confirm == true && context.mounted) {
         await Supabase.instance.client.auth.signOut();
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
+        if (context.mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logout failed: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Logout failed: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     }
   }
 

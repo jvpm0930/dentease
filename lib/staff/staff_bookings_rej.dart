@@ -1,10 +1,11 @@
 import 'package:dentease/staff/staff_bookings_apprv.dart';
 import 'package:dentease/staff/staff_bookings_pend.dart';
-import 'package:dentease/staff/staff_rej-can.dart';
-import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/staff/staff_rej_can.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 String formatDateTime(String dateTime) {
   DateTime parsedDate = DateTime.parse(dateTime);
@@ -18,11 +19,12 @@ class StaffBookingRejPage extends StatefulWidget {
       {super.key, required this.staffId, required this.clinicId});
 
   @override
-  _StaffBookingRejPageState createState() => _StaffBookingRejPageState();
+  StaffBookingRejPageState createState() => StaffBookingRejPageState();
 }
 
-class _StaffBookingRejPageState extends State<StaffBookingRejPage> {
-  final supabase = Supabase.instance.client;
+class StaffBookingRejPageState extends State<StaffBookingRejPage> {
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> _bookingsFuture;
 
   @override
@@ -37,157 +39,316 @@ class _StaffBookingRejPageState extends State<StaffBookingRejPage> {
         .select(
             'booking_id, patient_id, service_id, clinic_id, date, status, patients(firstname), services(service_name)')
         .or('status.eq.rejected, status.eq.cancelled')
-        .eq('clinic_id', widget.clinicId); // Filters bookings by clinicId
+        .eq('clinic_id', widget.clinicId);
 
     return response;
   }
 
   @override
   Widget build(BuildContext context) {
-    return BackgroundCont(
-        child: Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: const Text(
-          "Rejected/Cancelled Booking",
-          style: TextStyle(color: Colors.white),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.background,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Rejected Appointments',
+            style: GoogleFonts.poppins(
+              color: AppTheme.textDark,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: AppTheme.textDark),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent, // Transparent AppBar
-        elevation: 0, // Remove shadow
-        iconTheme: const IconThemeData(color: Colors.white), // White icons
-      ),
-      body: Column(
-        children: [
-          // Buttons for switching between Approved & Pending
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
+        body: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppTheme.cardShadow,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton(
+                      'Approved',
+                      false,
+                      () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => StaffBookingApprvPage(
-                              clinicId: widget.clinicId,
-                              staffId: widget.staffId),
+                            clinicId: widget.clinicId,
+                            staffId: widget.staffId,
+                          ),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue, // Active color
-                      foregroundColor: Colors.white, // Active text color
+                      ),
                     ),
-                    child: const Text("Approved"),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
+                  Expanded(
+                    child: _buildTabButton(
+                      'Pending',
+                      false,
+                      () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => StaffBookingPendPage(
-                              clinicId: widget.clinicId,
-                              staffId: widget.staffId),
+                            clinicId: widget.clinicId,
+                            staffId: widget.staffId,
+                          ),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
+                      ),
                     ),
-                    child: const Text("Pending"),
+                  ),
+                  Expanded(
+                    child: _buildTabButton('Rejected', true, null),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _bookingsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryBlue,
+                      ),
+                    );
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  final bookings = snapshot.data!;
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: bookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = bookings[index];
+                      return _buildModernBookingCard(booking);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton(String title, bool isActive, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primaryBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isActive ? Colors.white : AppTheme.textGrey,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernBookingCard(Map<String, dynamic> booking) {
+    final serviceName =
+        booking['services']['service_name'] ?? 'Unknown Service';
+    final patientName = booking['patients']['firstname'] ?? 'Unknown Patient';
+    final date = booking['date'] ?? '';
+    final status = booking['status'] ?? 'rejected';
+
+    final isRejected = status == 'rejected';
+    final statusColor = isRejected ? AppTheme.errorColor : AppTheme.textGrey;
+    final borderColor = isRejected ? AppTheme.errorColor : AppTheme.textGrey;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: borderColor,
+          width: 2,
+        ),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    serviceName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue, // Active color
-                      foregroundColor: Colors.white, // Active text color
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    status.toUpperCase(),
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
                     ),
-                    child: const Text("Rejected"),
                   ),
                 ),
               ],
             ),
-          ),
-
-          // Booking list
-          Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _bookingsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                      child: Text("No rejected/cancelled bookings"));
-                }
-
-                final bookings = snapshot.data!;
-
-                return ListView.builder(
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(10),
-                        title: Text(
-                          booking['services']['service_name'],
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppTheme.textGrey.withValues(alpha: 0.1),
+                  child: Icon(
+                    Icons.person,
+                    color: AppTheme.textGrey,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        patientName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                                "Patient: ${booking['patients']['firstname']}"),
-                            Text("Date: ${formatDateTime(booking['date'])}"),
-                            if (booking['clinics'] != null)
-                              Text(
-                                  "Clinic: ${booking['clinics']['clinic_name']}"),
-                            Text("Status: ${booking['status']}",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red)),
-                          ],
+                      ),
+                      Text(
+                        formatDateTime(date),
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: AppTheme.textGrey,
                         ),
-                        trailing: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    StaffRejectedCancelledBookingsPage(
-                                        booking: booking),
-                              ),
-                            );
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.only(right: 10),
-                            child: Icon(Icons.info, color: Colors.blue),
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            StaffRejectedCancelledBookingsPage(
+                          booking: booking,
                         ),
                       ),
                     );
                   },
-                );
-              },
+                  icon: Icon(
+                    Icons.info_outline,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isRejected ? Icons.cancel : Icons.info,
+                    color: statusColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isRejected
+                        ? 'Appointment rejected'
+                        : 'Appointment cancelled',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: statusColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.event_busy_outlined,
+            size: 64,
+            color: AppTheme.textGrey.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No rejected appointments',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textGrey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Rejected and cancelled appointments will appear here',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: AppTheme.textGrey,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-    ));
+    );
   }
 }

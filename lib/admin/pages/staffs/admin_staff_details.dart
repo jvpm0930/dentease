@@ -68,11 +68,11 @@ class _AdmStaffDetailsPageState extends State<AdmStaffDetailsPage> {
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12.withOpacity(0.1),
+            color: Colors.black12.withValues(alpha: 0.1),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -80,7 +80,7 @@ class _AdmStaffDetailsPageState extends State<AdmStaffDetailsPage> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF103D7E)),
+          Icon(icon, color: const Color(0xFF1134A6)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -111,10 +111,14 @@ class _AdmStaffDetailsPageState extends State<AdmStaffDetailsPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          title: const Text('Staff Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),)
-          ),
+            backgroundColor: Colors.transparent,
+            leading: const BackButton(color: Colors.black),
+            foregroundColor: Colors.white,
+            title: const Text(
+              'Staff Details',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            )),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : Padding(

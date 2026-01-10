@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
 String formatDateTime(String dateTime) {
@@ -25,8 +26,6 @@ class _DentistRejectedCancelledBookingsPageState
 
   List<Map<String, dynamic>> bookings = [];
   bool isLoading = true;
-
-  static const Color kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -82,7 +81,7 @@ class _DentistRejectedCancelledBookingsPageState
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: kPrimary,
+              backgroundColor: AppTheme.primaryBlue,
               foregroundColor: Colors.white,
             ),
             child: const Text('Save'),
@@ -102,10 +101,10 @@ class _DentistRejectedCancelledBookingsPageState
 
   Widget _statusChip(String status) {
     final lower = status.toLowerCase();
-    Color bg = Colors.red.withOpacity(0.12);
+    Color bg = Colors.red.withValues(alpha: 0.12);
     Color fg = Colors.red.shade800;
     if (lower == 'cancelled') {
-      bg = Colors.orange.withOpacity(0.12);
+      bg = Colors.orange.withValues(alpha: 0.12);
       fg = Colors.orange.shade800;
     }
     return Container(
@@ -113,7 +112,7 @@ class _DentistRejectedCancelledBookingsPageState
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fg.withOpacity(0.25)),
+        border: Border.all(color: fg.withValues(alpha: 0.25)),
       ),
       child: Text(
         status,
@@ -183,7 +182,7 @@ class _DentistRejectedCancelledBookingsPageState
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   const Icon(Icons.event_busy_rounded,
-                                      color: kPrimary),
+                                      color: AppTheme.primaryBlue),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -249,8 +248,9 @@ class _DentistRejectedCancelledBookingsPageState
                                   icon: const Icon(Icons.edit),
                                   label: const Text('Edit Reason'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: kPrimary,
-                                    side: const BorderSide(color: kPrimary),
+                                    foregroundColor: AppTheme.primaryBlue,
+                                    side: const BorderSide(
+                                        color: AppTheme.primaryBlue),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 10),
                                     shape: RoundedRectangleBorder(
@@ -310,16 +310,10 @@ class _SectionCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: child,
     );

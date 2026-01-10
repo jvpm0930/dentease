@@ -245,9 +245,12 @@ class InferenceIsolate {
     final image = img.decodeImage(bytes);
     
     if (image == null) throw Exception("Could not decode image");
+    
+    // 🔧 FIX: Correct orientation (handle EXIF rotation)
+    final oriented = img.bakeOrientation(image);
 
     // Resize to 224x224
-    final resized = img.copyResize(image, width: 224, height: 224);
+    final resized = img.copyResize(oriented, width: 224, height: 224);
 
     // Normalize to [-1, 1] float32
     // Shape: [1, 224, 224, 3]
@@ -272,8 +275,11 @@ class InferenceIsolate {
     
     if (image == null) throw Exception("Could not decode image");
 
+    // 🔧 FIX: Correct orientation (handle EXIF rotation)
+    final oriented = img.bakeOrientation(image);
+
     // Resize to 150x150
-    final resized = img.copyResize(image, width: 150, height: 150);
+    final resized = img.copyResize(oriented, width: 150, height: 150);
 
     // Normalize to [0, 1] float32
     // Shape: [1, 150, 150, 3]

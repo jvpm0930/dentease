@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
 
 android {
@@ -22,10 +23,13 @@ android {
 
     defaultConfig {
         applicationId = "com.example.dentease"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdkVersion = flutter.minSdkVersion  // Android 5.0 - supports most devices
+        targetSdk = 34  // Android 14 - stable target
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Removed ndk abiFilters to avoid conflict with --split-per-abi
+        // The --split-per-abi flag will handle ABI splitting automatically
     }
 
     buildTypes {
@@ -45,4 +49,7 @@ flutter {
 dependencies {
     //  Add this line
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:34.7.0')
 }

@@ -1,7 +1,8 @@
-import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 
 class PatientProfUpdate extends StatefulWidget {
@@ -14,9 +15,8 @@ class PatientProfUpdate extends StatefulWidget {
 }
 
 class _PatientProfUpdateState extends State<PatientProfUpdate> {
-  static const Color kPrimary = Color(0xFF103D7E);
-
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController firstnameController = TextEditingController();
@@ -41,7 +41,7 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
       final response = await supabase
           .from('patients')
           .select(
-              'firstname, lastname, phone, profile_url, age, gender, password')
+              'firstname, lastname, phone, profile_url, age, gender, password, fcm_token')
           .eq('patient_id', widget.patientId)
           .single();
 
@@ -134,117 +134,124 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
 
   @override
   Widget build(BuildContext context) {
-    return BackgroundCont(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text(
-            "Update Profile",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: Text(
+          "Update Profile",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
           ),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 8),
+        centerTitle: true,
+        backgroundColor: AppTheme.primaryBlue,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    const SizedBox(height: 8),
 
-                      // Avatar with camera chip
-                      Center(
-                        child: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                              child: GestureDetector(
-                                onTap: _pickAndUploadImage,
-                                child: CircleAvatar(
-                                  radius: 76,
-                                  backgroundColor: Colors.grey[200],
-                                  backgroundImage: (profileUrl != null &&
-                                          profileUrl!.isNotEmpty)
-                                      ? NetworkImage(profileUrl!)
-                                      : const AssetImage('assets/profile.png')
-                                          as ImageProvider,
-                                ),
+                    // Avatar with camera chip
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppTheme.cardBackground
+                                  .withValues(alpha: 0.9),
+                            ),
+                            child: GestureDetector(
+                              onTap: _pickAndUploadImage,
+                              child: CircleAvatar(
+                                radius: 76,
+                                backgroundColor: AppTheme.dividerColor,
+                                backgroundImage: (profileUrl != null &&
+                                        profileUrl!.isNotEmpty)
+                                    ? NetworkImage(profileUrl!)
+                                    : const AssetImage('assets/profile.png')
+                                        as ImageProvider,
                               ),
                             ),
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(22),
-                                onTap: _pickAndUploadImage,
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: kPrimary,
-                                  ),
-                                  padding: const EdgeInsets.all(10),
-                                  child: const Icon(Icons.camera_alt,
-                                      color: Colors.white, size: 20),
+                          ),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(22),
+                              onTap: _pickAndUploadImage,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppTheme.primaryBlue,
                                 ),
+                                padding: const EdgeInsets.all(10),
+                                child: const Icon(Icons.camera_alt,
+                                    color: Colors.white, size: 20),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Fields styled like DentistProfUpdate (TextFields only)
-                      _buildInputField(
-                        controller: firstnameController,
-                        label: 'Firstname',
-                        icon: Icons.person,
-                        validatorMsg: 'Required',
-                      ),
-                      _buildInputField(
-                        controller: lastnameController,
-                        label: 'Lastname',
-                        icon: Icons.person_outline,
-                        validatorMsg: 'Required',
-                      ),
-                      _buildInputField(
-                        controller: ageController,
-                        label: 'Age',
-                        icon: Icons.calculate,
-                        keyboardType: TextInputType.number,
-                        validatorMsg: 'Required',
-                      ),
-                      _buildDropdownField(
-                        label: 'Gender',
-                        icon: Icons.wc_rounded,
-                        value: genderValue,
-                        items: const [
-                          DropdownMenuItem(value: 'Male', child: Text('Male')),
-                          DropdownMenuItem(
-                              value: 'Female', child: Text('Female')),
-                          DropdownMenuItem(
-                              value: 'Not Specify', child: Text('Not Specify')),
+                          ),
                         ],
-                        onChanged: (val) => setState(() => genderValue = val),
-                        validatorMsg: 'Please select gender',
                       ),
-                      _buildInputField(
-                        controller: phoneController,
-                        label: 'Phone Number',
-                        icon: Icons.phone,
-                        keyboardType: TextInputType.phone,
-                        validatorMsg: 'Required',
-                      ),
-                      /*
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Fields styled like DentistProfUpdate (TextFields only)
+                    _buildInputField(
+                      controller: firstnameController,
+                      label: 'Firstname',
+                      icon: Icons.person,
+                      validatorMsg: 'Required',
+                    ),
+                    _buildInputField(
+                      controller: lastnameController,
+                      label: 'Lastname',
+                      icon: Icons.person_outline,
+                      validatorMsg: 'Required',
+                    ),
+                    _buildInputField(
+                      controller: ageController,
+                      label: 'Age',
+                      icon: Icons.calculate,
+                      keyboardType: TextInputType.number,
+                      validatorMsg: 'Required',
+                    ),
+                    _buildDropdownField(
+                      label: 'Gender',
+                      icon: Icons.wc_rounded,
+                      value: genderValue,
+                      items: const [
+                        DropdownMenuItem(value: 'Male', child: Text('Male')),
+                        DropdownMenuItem(
+                            value: 'Female', child: Text('Female')),
+                        DropdownMenuItem(
+                            value: 'Not Specify', child: Text('Not Specify')),
+                      ],
+                      onChanged: (val) => setState(() => genderValue = val),
+                      validatorMsg: 'Please select gender',
+                    ),
+                    _buildInputField(
+                      controller: phoneController,
+                      label: 'Phone Number',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                      validatorMsg: 'Required',
+                    ),
+                    /*
                       _buildPasswordField(
                         controller: passwordController,
                         label: 'Password',
@@ -256,36 +263,35 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
                       ),
                        */
 
-                      const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                      // Save button (matches profile buttons)
-                      ElevatedButton.icon(
-                        onPressed: _updatePatientDetails,
-                        icon: const Icon(Icons.save, color: Colors.white),
-                        label: const Text(
-                          'Save Changes',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                          shadowColor: Colors.black26,
+                    // Save button (matches profile buttons)
+                    ElevatedButton.icon(
+                      onPressed: _updatePatientDetails,
+                      icon: const Icon(Icons.save, color: Colors.white),
+                      label: const Text(
+                        'Save Changes',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 50),
-                    ],
-                  ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                        shadowColor: AppTheme.shadowMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                  ],
                 ),
               ),
-      ),
+            ),
     );
   }
 
@@ -297,23 +303,23 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
   }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      prefixIcon: Icon(icon, color: kPrimary),
+      labelStyle: TextStyle(color: AppTheme.textGrey),
+      prefixIcon: Icon(icon, color: AppTheme.primaryBlue),
       suffixIcon: suffix,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppTheme.cardBackground,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: AppTheme.dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: kPrimary, width: 1.5),
+        borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.redAccent),
+        borderSide: const BorderSide(color: AppTheme.errorColor),
       ),
     );
   }
@@ -335,7 +341,7 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
             ? (value) =>
                 value == null || value.trim().isEmpty ? validatorMsg : null
             : null,
-        style: const TextStyle(fontSize: 16, color: Colors.black87),
+        style: TextStyle(fontSize: 16, color: AppTheme.textDark),
         decoration: _decoration(label: label, icon: icon),
       ),
     );
@@ -359,14 +365,14 @@ class _PatientProfUpdateState extends State<PatientProfUpdate> {
             ? (value) =>
                 value == null || value.trim().isEmpty ? validatorMsg : null
             : null,
-        style: const TextStyle(fontSize: 16, color: Colors.black87),
+        style: TextStyle(fontSize: 16, color: AppTheme.textDark),
         decoration: _decoration(
           label: label,
           icon: icon,
           suffix: IconButton(
             icon: Icon(
               obscureText ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey,
+              color: AppTheme.textGrey,
             ),
             onPressed: toggle,
           ),

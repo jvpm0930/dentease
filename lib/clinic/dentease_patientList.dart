@@ -23,12 +23,12 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
     _fetchPatient();
   }
 
-
   Future<void> _fetchPatient() async {
     try {
       final response = await supabase
           .from('bookings')
-          .select('patients:patient_id (patient_id, firstname, lastname, email, phone)')
+          .select(
+              'patients:patient_id (patient_id, firstname, lastname, email, phone)')
           .eq('clinic_id', widget.clinicId);
 
       // Extract patient details properly
@@ -40,8 +40,8 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
       // ** Remove duplicates by `id` (patient_id) to ensure uniqueness**
       final uniquePatients = <String, Map<String, dynamic>>{};
       for (var patient in patientList) {
-        final id =
-            patient['patient_id'].toString(); // Use `id` or `email` as unique key
+        final id = patient['patient_id']
+            .toString(); // Use `id` or `email` as unique key
         uniquePatients[id] = patient;
       }
 
@@ -70,7 +70,7 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
-          backgroundColor: Colors.transparent, // Transparent AppBar
+          backgroundColor: const Color(0xFF1134A6), // Primary blue header
           elevation: 0, // Remove shadow
           iconTheme: const IconThemeData(color: Colors.white), // White icons
         ),
@@ -128,11 +128,13 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
                                               "Email: ${patient['email'] ?? 'N/A'}"),
                                           Text(
                                               "Phone: ${patient['phone'] ?? 'N/A'}"),
-                                        ], 
+                                        ],
                                       ),
-                                      leading: const Icon(Icons.person, 
-                                          color: Color(0xFF103D7E),
-                                          ),
+                                      leading: const Icon(
+                                        Icons.person,
+                                        color: Color(
+                                            0xFF1134A6), // Primary blue icons
+                                      ),
                                       trailing: GestureDetector(
                                         onTap: () {
                                           Navigator.push(
@@ -140,8 +142,8 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   DentistBookingPatientPage(
-                                                patientId: patient[
-                                                    'patient_id'],
+                                                patientId:
+                                                    patient['patient_id'],
                                                 clinicId: widget.clinicId,
                                               ),
                                             ),
@@ -150,10 +152,10 @@ class _ClinicPatientListPageState extends State<ClinicPatientListPage> {
                                         child: const Padding(
                                           padding: EdgeInsets.only(right: 10),
                                           child: Icon(Icons.info,
-                                              color: Color(0xFF103D7E)),
+                                              color: Color(
+                                                  0xFF1134A6)), // Primary blue icons
                                         ),
                                       ),
-
                                     ),
                                   );
                                 },

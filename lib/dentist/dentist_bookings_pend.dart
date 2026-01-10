@@ -22,7 +22,8 @@ class DentistBookingPendPage extends StatefulWidget {
 }
 
 class _DentistBookingPendPageState extends State<DentistBookingPendPage> {
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> _bookingsFuture;
 
   @override

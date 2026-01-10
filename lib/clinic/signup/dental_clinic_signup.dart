@@ -1,7 +1,10 @@
 import 'package:dentease/clinic/signup/dental_signup.dart';
 import 'package:dentease/widgets/background_container.dart';
+import 'package:dentease/services/connectivity_service.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/services.dart';
 import '../../../login/login_screen.dart';
 
 class DentalApplyFirst extends StatefulWidget {
@@ -15,8 +18,9 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
   final clinicnameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
+  final descController = TextEditingController(); // Added
   final _formKey = GlobalKey<FormState>();
-
+  bool _hasStaff = true; // Default to true - most clinics have staff
 
   final supabase = Supabase.instance.client;
 
@@ -33,22 +37,41 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
 
   /// ** Sign-Up Function with Duplicate Checks**
   Future<void> signUp() async {
+    // Check internet connectivity first
+    final hasInternet = await ConnectivityService().hasInternetConnection();
+    if (!hasInternet) {
+      if (mounted) {
+        ConnectivityService.showNoInternetDialog(context);
+      }
+      return;
+    }
+
     try {
       final clinicname = clinicnameController.text.trim();
       final email = emailController.text.trim();
       final phone = phoneController.text.trim();
+      final desc = descController.text.trim(); // Added
+
+      debugPrint('📝 [ClinicSignup] Starting clinic registration...');
+      debugPrint('📝 [ClinicSignup] Clinic name: $clinicname');
+      debugPrint('📝 [ClinicSignup] Email: $email');
+      debugPrint('📝 [ClinicSignup] Has staff: $_hasStaff');
 
       // **Check for Empty Fields**
       if (clinicname.isEmpty || email.isEmpty || phone.isEmpty) {
+        debugPrint('❌ [ClinicSignup] Validation failed - empty fields');
         _showSnackbar('Please fill in all fields.');
         return;
       }
 
       // **Check if Name Exists**
       if (await _checkIfNameExists(clinicname)) {
+        debugPrint('❌ [ClinicSignup] Clinic name already exists: $clinicname');
         _showSnackbar('Name already taken. Please use a different name.');
         return;
       }
+
+      debugPrint('✅ [ClinicSignup] Validation passed, inserting clinic...');
 
       // **Store Info in Clinic Table and Retrieve `clinic_id`**
       final response = await supabase
@@ -57,16 +80,24 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
             'clinic_name': clinicname,
             'email': email,
             'phone': phone,
+            'info': desc,
+            'status': 'pending', // Set initial status to pending
+            'has_staff': _hasStaff, // Store staff preference
           })
-          .select('clinic_id')
+          .select('clinic_id') // Ensure we get back the ID
           .maybeSingle();
 
       if (response == null || response['clinic_id'] == null) {
+        debugPrint(
+            '❌ [ClinicSignup] Failed to create clinic - no clinic_id returned');
         _showSnackbar('Error creating clinic. Please try again.');
         return;
       }
 
       final clinicId = response['clinic_id']; // Retrieve clinic_id
+      debugPrint(
+          '✅ [ClinicSignup] Clinic created successfully with ID: $clinicId');
+      debugPrint('✅ [ClinicSignup] Has staff preference saved: $_hasStaff');
 
       // **Success Message & Navigate to Dental Signup page**
       _showSnackbar('Success! Now Dentist Signup.');
@@ -101,7 +132,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
             body: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(  
+                child: Column(
                   children: [
                     Form(
                       key: _formKey,
@@ -110,7 +141,9 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
                           Text(
                             'Clinic Verification',
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 25, fontWeight: FontWeight.bold),
+                                color: Colors.white,
+                                fontSize: 25,
+                                fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 15),
                           _buildTextField(clinicnameController, 'Clinic Name',
@@ -127,7 +160,116 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
                               keyboardType: TextInputType.emailAddress),
                           const SizedBox(height: 10),
                           _buildTextField(phoneController,
-                              'Clinic Contact Number', Icons.phone),
+                              'Clinic Contact Number', Icons.phone,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ]),
+                          const SizedBox(height: 10),
+                          _buildTextField(
+                            descController,
+                            'Clinic Description (Optional)',
+                            Icons.description,
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 20),
+                          // Staff Toggle Section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.cardBackground
+                                  .withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Do you have staff members?',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textDark,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _hasStaff
+                                                ? 'You can add staff members later'
+                                                : 'Your clinic operates without additional staff',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: AppTheme.textGrey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: _hasStaff,
+                                      onChanged: (value) {
+                                        debugPrint(
+                                            '🔄 [ClinicSignup] Staff toggle changed: $value');
+                                        setState(() {
+                                          _hasStaff = value;
+                                        });
+                                      },
+                                      thumbColor: WidgetStateProperty
+                                          .resolveWith<Color?>((states) {
+                                        if (states
+                                            .contains(WidgetState.selected)) {
+                                          return AppTheme.primaryBlue;
+                                        }
+                                        return null;
+                                      }),
+                                      trackColor: WidgetStateProperty
+                                          .resolveWith<Color?>((states) {
+                                        if (states
+                                            .contains(WidgetState.selected)) {
+                                          return AppTheme.softBlue;
+                                        }
+                                        return null;
+                                      }),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      _hasStaff ? Icons.groups : Icons.person,
+                                      size: 20,
+                                      color: _hasStaff
+                                          ? AppTheme.primaryBlue
+                                          : AppTheme.textGrey,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _hasStaff
+                                          ? 'Staff members will be registered'
+                                          : 'Solo practice mode',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: _hasStaff
+                                            ? AppTheme.primaryBlue
+                                            : AppTheme.textGrey,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 20),
                           _buildSignUpButton(Icons.arrow_left),
                           _buildLoginTextButton(),
@@ -146,19 +288,23 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
     IconData icon, {
     bool isPassword = false,
     TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
       keyboardType: keyboardType,
+      maxLines: maxLines,
+      inputFormatters: inputFormatters,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Icon(icon, color: Colors.indigo[900]),
+          child: Icon(icon, color: AppTheme.primaryBlue),
         ),
-        errorStyle: const TextStyle(color: Colors.redAccent),
+        errorStyle: const TextStyle(color: AppTheme.errorColor),
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -176,17 +322,20 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
           }
         }
 
+        // Phone validation
+        if (hint.contains('Contact Number') || hint.contains('Phone')) {
+          if (value.length < 10) {
+            return 'Please enter a valid phone number';
+          }
+        }
+
         return null;
       },
     );
   }
 
-
-
   /// ** Sign-Up Button Widget**
-  Widget _buildSignUpButton(
-    IconData icon
-  ) {
+  Widget _buildSignUpButton(IconData icon) {
     return ElevatedButton(
         onPressed: signUp,
         style: ElevatedButton.styleFrom(
@@ -203,7 +352,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.indigo[900], // Dark blue text
+            color: AppTheme.primaryBlue, // Dark blue text
           ),
         ));
   }
@@ -223,7 +372,7 @@ class _DentalApplyFirstState extends State<DentalApplyFirst> {
             TextSpan(
               text: "Login",
               style: TextStyle(
-                color: Colors.indigo, 
+                color: AppTheme.primaryBlue,
                 fontWeight: FontWeight.bold,
               ),
             ),

@@ -1,6 +1,5 @@
 import 'dart:ui';
-import 'package:dentease/patients/patient_pagev2.dart';
-import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,9 +13,8 @@ class PatientFeedbackpage extends StatefulWidget {
 }
 
 class _PatientFeedbackpageState extends State<PatientFeedbackpage> {
-  static const Color kPrimary = Color(0xFF103D7E);
-
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
 
   int selectedRating = 0;
   final TextEditingController feedbackController = TextEditingController();
@@ -65,10 +63,13 @@ class _PatientFeedbackpageState extends State<PatientFeedbackpage> {
         'clinic_id': widget.clinicId,
       });
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Feedback submitted successfully!")),
       );
 
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       setState(() => errorMessage = "Error submitting feedback: $e");
@@ -89,99 +90,98 @@ class _PatientFeedbackpageState extends State<PatientFeedbackpage> {
 
   @override
   Widget build(BuildContext context) {
-    return BackgroundCont(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text("Rate Clinic", style: TextStyle(
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text(
+          "Rate Clinic",
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
-          ),),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          ),
         ),
-        resizeToAvoidBottomInset: true,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: _GlassPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "How was your experience?",
-                        style:
-                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        centerTitle: true,
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: Colors.white,
+      ),
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: _GlassPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "How was your experience?",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 2,
+                      children: List.generate(5, (i) => buildStar(i + 1)),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Leave a feedback:",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    _InputCard(
+                      child: TextField(
+                        controller: feedbackController,
+                        maxLines: 5,
+                        decoration: const InputDecoration(
+                          hintText: "Write your feedback here...",
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 2,
-                        children: List.generate(5, (i) => buildStar(i + 1)),
+                    ),
+                    const SizedBox(height: 10),
+                    if (errorMessage != null)
+                      Text(
+                        errorMessage!,
+                        style: const TextStyle(
+                            color: AppTheme.errorColor, fontSize: 14),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Leave a feedback:",
-                        style:
-                            TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      _InputCard(
-                        child: TextField(
-                          controller: feedbackController,
-                          maxLines: 5,
-                          decoration: const InputDecoration(
-                            hintText: "Write your feedback here...",
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
+                    const SizedBox(height: 12),
+
+                    // Submit (filled capsule)
+                    isSubmitting
+                        ? const Center(
+                            child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: CircularProgressIndicator(),
+                          ))
+                        : _CapsuleButton.filled(
+                            label: 'Submit Feedback',
+                            onTap: submitFeedback,
+                            background: AppTheme.primaryBlue,
+                            foreground: Colors.white,
+                            minWidth: double.infinity,
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (errorMessage != null)
-                        Text(
-                          errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
-                        ),
-                      const SizedBox(height: 12),
-      
-                      // Submit (filled capsule)
-                      isSubmitting
-                          ? const Center(
-                              child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: CircularProgressIndicator(),
-                            ))
-                          : _CapsuleButton.filled(
-                              label: 'Submit Feedback',
-                              onTap: submitFeedback,
-                              background: kPrimary,
-                              foreground: Colors.white,
-                              minWidth: double.infinity,
-                            ),
-      
-                      const SizedBox(height: 10),
-      
-                      // Not Now (translucent capsule)
-                      _CapsuleButton.translucent(
-                        label: 'Not now',
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const PatientPage()),
-                          );
-                        },
-                        background: kPrimary.withValues(alpha: 0.18),
-                        textColor: Colors.black.withValues(alpha: 0.75),
-                        borderColor: Colors.white.withValues(alpha: 0.15),
-                        minWidth: double.infinity,
-                      ),
-                    ],
-                  ),
+
+                    const SizedBox(height: 10),
+
+                    // Not Now (translucent capsule)
+                    _CapsuleButton.translucent(
+                      label: 'Not now',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                      background: AppTheme.primaryBlue.withValues(alpha: 0.18),
+                      textColor: AppTheme.textDark.withValues(alpha: 0.75),
+                      borderColor:
+                          AppTheme.cardBackground.withValues(alpha: 0.15),
+                      minWidth: double.infinity,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -206,7 +206,7 @@ class _GlassPanel extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
+            color: AppTheme.cardBackground.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(
@@ -215,7 +215,8 @@ class _GlassPanel extends StatelessWidget {
                 offset: Offset(0, 6),
               ),
             ],
-            border: Border.all(color: Colors.white.withValues(alpha: 0.60)),
+            border: Border.all(
+                color: AppTheme.cardBackground.withValues(alpha: 0.60)),
           ),
           child: child,
         ),
@@ -234,7 +235,7 @@ class _InputCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.98),
+        color: AppTheme.cardBackground.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(

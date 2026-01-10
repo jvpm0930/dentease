@@ -135,7 +135,7 @@ class _AdminSupportChatforClinicState extends State<AdminSupportChatforClinic> {
                           borderRadius: BorderRadius.circular(15),
                         ),
                         margin: const EdgeInsets.symmetric(vertical: 8),
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(10),
 

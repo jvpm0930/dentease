@@ -12,7 +12,8 @@ class ClinicFrontForDentStaff extends StatefulWidget {
 }
 
 class _ClinicFrontForDentStaffState extends State<ClinicFrontForDentStaff> {
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
   List<Map<String, dynamic>> clinics = [];
   bool isLoading = true;
   String errorMessage = '';

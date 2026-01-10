@@ -1,10 +1,11 @@
 import 'package:dentease/patients/patient_booking_details.dart';
 import 'package:dentease/patients/patient_booking_pend.dart';
 import 'package:dentease/patients/patient_booking_rej.dart';
-import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 String formatDateTime(String dateTime) {
   DateTime parsedDate = DateTime.parse(dateTime);
@@ -16,28 +17,130 @@ class PatientBookingApprv extends StatefulWidget {
   const PatientBookingApprv({super.key, required this.patientId});
 
   @override
-  _PatientBookingApprvState createState() => _PatientBookingApprvState();
+  PatientBookingApprvState createState() => PatientBookingApprvState();
 }
 
-class _PatientBookingApprvState extends State<PatientBookingApprv> {
-  final supabase = Supabase.instance.client;
-  late Future<List<Map<String, dynamic>>> _bookingsFuture;
+class PatientBookingApprvState extends State<PatientBookingApprv> {
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
+  RealtimeChannel? _statusChannel;
 
   @override
   void initState() {
     super.initState();
-    _fetchBookings();
+    _setupStatusListener();
   }
 
-  Future<void> _fetchBookings() async {
-    setState(() {
-      _bookingsFuture = supabase
-          .from('bookings')
-          .select(
-              'booking_id, patient_id, service_id, clinic_id, date, status, before_url, after_url, services(service_name, service_price), clinics(clinic_name), patients(firstname, lastname, email, phone)')
-          .or('status.eq.approved, status.eq.completed')
-          .eq('patient_id', widget.patientId);
-    });
+  @override
+  void dispose() {
+    _statusChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  void _setupStatusListener() {
+    // Listen for any booking updates for this patient
+    _statusChannel = supabase
+        .channel('patient_booking_apprv_${widget.patientId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'bookings',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'patient_id',
+            value: widget.patientId,
+          ),
+          callback: (payload) {
+            final newStatus = payload.newRecord['status'] as String?;
+            final oldStatus = payload.oldRecord['status'] as String?;
+            
+            // Only notify if status actually changed
+            if (oldStatus != newStatus && mounted) {
+              _showStatusChangeNotification(newStatus, oldStatus);
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  void _showStatusChangeNotification(String? newStatus, String? oldStatus) {
+    if (!mounted) return;
+    
+    String message;
+    Color backgroundColor;
+    IconData icon;
+    
+    switch (newStatus) {
+      case 'completed':
+        message = '✓ Your appointment has been completed!';
+        backgroundColor = Colors.blue.shade600;
+        icon = Icons.done_all;
+        break;
+      case 'cancelled':
+        message = 'Your appointment was cancelled';
+        backgroundColor = Colors.orange.shade600;
+        icon = Icons.cancel;
+        break;
+      default:
+        return; // Don't show notification for other statuses
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Stream<List<Map<String, dynamic>>> _getBookingsStream() {
+    return supabase
+        .from('bookings')
+        .stream(primaryKey: ['booking_id'])
+        .eq('patient_id', widget.patientId)
+        .map((data) => data
+            .where((booking) =>
+                booking['status'] == 'approved' ||
+                booking['status'] == 'completed')
+            .toList());
+  }
+
+  Future<List<Map<String, dynamic>>> _enrichBookingsWithDetails(
+      List<Map<String, dynamic>> bookings) async {
+    List<Map<String, dynamic>> enrichedBookings = [];
+
+    for (var booking in bookings) {
+      // Fetch clinic details
+      final clinic = await supabase
+          .from('clinics')
+          .select('clinic_name')
+          .eq('clinic_id', booking['clinic_id'])
+          .maybeSingle();
+
+      // Fetch service details
+      final service = await supabase
+          .from('services')
+          .select('service_name, service_price')
+          .eq('service_id', booking['service_id'])
+          .maybeSingle();
+
+      enrichedBookings.add({
+        ...booking,
+        'clinics': clinic ?? {'clinic_name': 'Unknown Clinic'},
+        'services':
+            service ?? {'service_name': 'Unknown Service', 'service_price': 0},
+      });
+    }
+
+    return enrichedBookings;
   }
 
   // Fade-only transition route
@@ -56,25 +159,24 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
 
   @override
   Widget build(BuildContext context) {
-    return BackgroundCont(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text(
-            "Approved Appointments",
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              ),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: Column(
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: Column(
           children: [
-            // Buttons for switching between Approved, Pending, Rejected
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                "My Appointments",
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 22,
+                ),
+              ),
+            ),
+            // Navigation Buttons
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
               child: Row(
@@ -119,80 +221,188 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
               ),
             ),
 
-            // Booking list
+            // Booking List
             Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _bookingsFuture,
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _getBookingsStream(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(
+                        child: CircularProgressIndicator(
+                            color: AppTheme.primaryBlue));
                   }
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text("No approved bookings"));
+                    return Center(
+                      child: Text(
+                        "No approved bookings",
+                        style: GoogleFonts.poppins(
+                          color: AppTheme.textGrey,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
                   }
 
                   final bookings = snapshot.data!;
 
-                  return RefreshIndicator(
-                    onRefresh: _fetchBookings,
-                    child: ListView.builder(
-                      itemCount: bookings.length,
-                      itemBuilder: (context, index) {
-                        final booking = bookings[index];
+                  return FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _enrichBookingsWithDetails(bookings),
+                    builder: (context, enrichedSnapshot) {
+                      if (!enrichedSnapshot.hasData) {
+                        return const Center(
+                            child: CircularProgressIndicator(
+                                color: AppTheme.primaryBlue));
+                      }
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(10),
-                            title: Text(
-                              booking['services']['service_name'],
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                    "Date: ${formatDateTime(booking['date'])}"),
-                                Text(
-                                    "Clinic: ${booking['clinics']['clinic_name']}"),
-                                Text(
-                                  "Status: ${booking['status']}",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: booking['status'] == 'approved'
-                                        ? const Color(0xFF103D7E)
-                                        : booking['status'] == 'completed'
-                                            ? Colors.green
-                                            : Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: GestureDetector(
-                              onTap: () {
-                                final clinicId = booking['clinic_id'];
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        PatientBookingDetailsPage(
-                                      booking: booking,
-                                      clinicId: clinicId,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.only(right: 10),
-                                child: Icon(Icons.info, color: Colors.blue),
+                      final enrichedBookings = enrichedSnapshot.data!;
+
+                      return RefreshIndicator(
+                        color: AppTheme.primaryBlue,
+                        onRefresh: () async {
+                          // Refresh will happen automatically via stream
+                        },
+                        child: ListView.builder(
+                          itemCount: enrichedBookings.length,
+                          itemBuilder: (context, index) {
+                            final booking = enrichedBookings[index];
+
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardBackground,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: AppTheme.cardShadow,
                               ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                booking['status'] == 'completed'
+                                                    ? AppTheme.tealAccent
+                                                        .withValues(alpha: 0.1)
+                                                    : AppTheme.primaryBlue
+                                                        .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            booking['status'] == 'completed'
+                                                ? Icons.check_circle_rounded
+                                                : Icons.event_available_rounded,
+                                            color:
+                                                booking['status'] == 'completed'
+                                                    ? AppTheme.tealAccent
+                                                    : AppTheme.primaryBlue,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            booking['services']['service_name'],
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textDark,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.info_outline_rounded,
+                                              color: AppTheme.primaryBlue),
+                                          onPressed: () {
+                                            final clinicId =
+                                                booking['clinic_id'];
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    PatientBookingDetailsPage(
+                                                  booking: booking,
+                                                  clinicId: clinicId,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.calendar_today_rounded,
+                                            size: 16, color: AppTheme.textGrey),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          formatDateTime(booking['date']),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 14,
+                                            color: AppTheme.textGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.local_hospital_rounded,
+                                            size: 16, color: AppTheme.textGrey),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            booking['clinics']['clinic_name'],
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14,
+                                              color: AppTheme.textGrey,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: booking['status'] == 'completed'
+                                            ? AppTheme.tealAccent
+                                                .withValues(alpha: 0.1)
+                                            : AppTheme.primaryBlue
+                                                .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        booking['status'] == 'completed'
+                                            ? 'Completed'
+                                            : 'Approved',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color:
+                                              booking['status'] == 'completed'
+                                                  ? AppTheme.tealAccent
+                                                  : AppTheme.primaryBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -202,27 +412,36 @@ class _PatientBookingApprvState extends State<PatientBookingApprv> {
       ),
     );
   }
-}
-Widget _segButton({
-  required String label,
-  required bool isActive,
-  required VoidCallback? onPressed,
-}) {
-  const activeBg = Color(0xFF103D7E);
-  const activeFg = Colors.white;
-  final inactiveBg = const Color.fromARGB(0, 255, 255, 255);
-  final inactiveFg = const Color.fromARGB(74, 0, 0, 0);
 
-  return ElevatedButton(
-    onPressed: isActive ? null : onPressed,
-    style: ElevatedButton.styleFrom(
-      // When active (current page), we disable the button but style it as active
-      disabledBackgroundColor: isActive ? activeBg : null,
-      disabledForegroundColor: isActive ? activeFg : null,
-      // When inactive (other pages), make it look like a disabled/grey button but clickable
-      backgroundColor: isActive ? null : inactiveBg,
-      foregroundColor: isActive ? null : inactiveFg,
-    ),
-    child: Text(label),
-  );
+  Widget _segButton({
+    required String label,
+    required bool isActive,
+    required VoidCallback? onPressed,
+  }) {
+    return ElevatedButton(
+      onPressed: isActive ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            isActive ? AppTheme.primaryBlue : AppTheme.cardBackground,
+        foregroundColor: isActive ? Colors.white : AppTheme.textGrey,
+        disabledBackgroundColor: AppTheme.primaryBlue,
+        disabledForegroundColor: Colors.white,
+        elevation: isActive ? 2 : 0,
+        shadowColor: AppTheme.shadowMedium,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: isActive ? AppTheme.primaryBlue : AppTheme.dividerColor,
+            width: 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        textStyle: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+        ),
+      ),
+      child: Text(label),
+    );
+  }
 }

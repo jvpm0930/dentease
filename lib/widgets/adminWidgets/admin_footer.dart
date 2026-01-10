@@ -1,12 +1,13 @@
+import 'package:dentease/admin/pages/admin_chat_list.dart';
 import 'package:dentease/admin/pages/clinics/admin_dentease_first.dart';
-import 'package:dentease/clinic/models/adminChat_supportList.dart';
+import 'package:dentease/logic/safe_navigator.dart';
+import 'package:dentease/services/messaging_service.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
-
 
 /// -----------------------------------------
 ///  LOCAL NOTIFICATION CONFIG
@@ -51,11 +52,14 @@ class AdminFooter extends StatefulWidget {
   const AdminFooter({super.key});
 
   @override
-  _AdminFooterState createState() => _AdminFooterState();
+  State<AdminFooter> createState() => _AdminFooterState();
 }
 
 class _AdminFooterState extends State<AdminFooter> {
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
+  final MessagingService _messagingService = MessagingService();
+
   String clinicNotifyKey = "admin_clinic_notify_flag";
   List<Map<String, dynamic>> clinics = [];
   bool isLoading = true;
@@ -66,21 +70,23 @@ class _AdminFooterState extends State<AdminFooter> {
   // Prevent duplicate notification alert
   Set<String> notifiedAdminMessageIds = {};
 
-  // Background poll timer
+  // Background poll timer & stream subscription
   Timer? _adminRefreshTimer;
+  StreamSubscription? _unreadSubscription;
+  String? _adminId;
 
   @override
   void initState() {
     super.initState();
     initAdminNotifications();
     loadAdminNotifiedChatIds();
-    fetchAdminChats();
     _loadNotifyFlag();
     _fetchClinics();
+    _initializeUnreadStream();
 
-    // Check chats every seconds
+    // Reduce polling frequency since we use streams
     _adminRefreshTimer = Timer.periodic(
-      const Duration(seconds: 1),
+      const Duration(seconds: 10),
       (_) => fetchAdminChats(),
     );
 
@@ -94,7 +100,9 @@ class _AdminFooterState extends State<AdminFooter> {
             final newNotify = payload.newRecord['notify'];
             final oldNotify = payload.oldRecord['notify'];
 
-            if (newNotify == oldNotify || newNotify == null || newNotify == "") {
+            if (newNotify == oldNotify ||
+                newNotify == null ||
+                newNotify == "") {
               return;
             }
 
@@ -112,6 +120,27 @@ class _AdminFooterState extends State<AdminFooter> {
         )
         .subscribe();
   }
+
+  Future<void> _initializeUnreadStream() async {
+    // Get admin ID
+    final adminRes =
+        await supabase.from('admins').select('admin_id').limit(1).maybeSingle();
+
+    if (adminRes != null) {
+      _adminId = adminRes['admin_id'] as String?;
+      if (_adminId != null) {
+        _unreadSubscription =
+            _messagingService.streamTotalUnreadCount(_adminId!).listen((count) {
+          if (mounted) {
+            setState(() {
+              hasNewClinicChats = count > 0;
+            });
+          }
+        });
+      }
+    }
+  }
+
   Future<void> _loadNotifyFlag() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -121,6 +150,7 @@ class _AdminFooterState extends State<AdminFooter> {
 
   @override
   void dispose() {
+    _unreadSubscription?.cancel();
     _adminRefreshTimer?.cancel(); // stop timer
     supabase.removeAllChannels(); // remove realtime listeners
     super.dispose();
@@ -153,15 +183,22 @@ class _AdminFooterState extends State<AdminFooter> {
     }
   }
 
-  /// -----------------------------------------------------------
-  /// CHECK NEW MESSAGES SENT TO ADMIN SUPPORT PANEL
-  /// -----------------------------------------------------------
   Future<void> fetchAdminChats() async {
     try {
+      // Fetch first admin ID dynamically from profiles table
+      final adminRes = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'admin')
+          .limit(1)
+          .maybeSingle();
+      final targetAdminId =
+          adminRes?['id'] ?? 'eee5f574-903b-4575-a9d9-2f69e58f1801';
+
       final response = await supabase
           .from('supports')
           .select('support_id, message, sender_id')
-          .eq('receiver_id', 'eee5f574-903b-4575-a9d9-2f69e58f1801') // ADMIN UID
+          .eq('receiver_id', targetAdminId)
           .or('is_read.eq.false,is_read.is.null')
           .order('timestamp', ascending: true);
 
@@ -199,17 +236,15 @@ class _AdminFooterState extends State<AdminFooter> {
   void _showSnackbar(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
-  
 
   @override
   Widget build(BuildContext context) {
-    final clinicId = clinics.isNotEmpty ? clinics.first['clinic_id'] : null;
-
+    // clinics list is fetched for other purposes
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       margin: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF103D7E),
+        color: const Color(0xFF1134A6),
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
           BoxShadow(
@@ -225,7 +260,7 @@ class _AdminFooterState extends State<AdminFooter> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _nav('assets/icons/home.png', const AdminPage()),
+          _nav('assets/icons/home.png', const AdminClinicListPage()),
 
           // CHAT SUPPORT ICON WITH BADGE
           IconButton(
@@ -233,7 +268,7 @@ class _AdminFooterState extends State<AdminFooter> {
             icon: Stack(
               alignment: Alignment.center,
               children: [
-                Image.asset('assets/icons/customer-service.png',
+                Image.asset('assets/icons/chat.png',
                     width: 30, height: 30, color: Colors.white),
                 if (hasNewClinicChats)
                   Positioned(
@@ -249,16 +284,11 @@ class _AdminFooterState extends State<AdminFooter> {
               ],
             ),
             onPressed: () {
-              Navigator.push(
+              SafeNavigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => AdminSupportChatforClinic(
-                    adminId: 'eee5f574-903b-4575-a9d9-2f69e58f1801',
-                  ),
-                ),
+                const AdminChatListPage(),
               );
-              setState(
-                  () => hasNewClinicChats = false); // remove badge when opened
+              setState(() => hasNewClinicChats = false);
             },
           ),
         ],
@@ -269,8 +299,7 @@ class _AdminFooterState extends State<AdminFooter> {
   Widget _nav(String icon, Widget page) {
     return IconButton(
       icon: Image.asset(icon, width: 30, height: 30, color: Colors.white),
-      onPressed: () =>
-          Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+      onPressed: () => SafeNavigator.push(context, page),
     );
   }
 }

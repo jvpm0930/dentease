@@ -1,5 +1,6 @@
 import 'package:dentease/clinic/dentease_moreDetails.dart';
 import 'package:dentease/widgets/clinicWidgets/forDentStaff_clinicPage.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:dentease/widgets/background_cont.dart';
 import 'package:dentease/widgets/dentistWidgets/dentist_footer.dart';
@@ -21,8 +22,8 @@ class DentClinicPage extends StatefulWidget {
 }
 
 class _DentClinicPageState extends State<DentClinicPage> {
-  final supabase = Supabase.instance.client;
-  final Color kPrimary = const Color(0xFF103D7E);
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
 
   Map<String, dynamic>? clinicDetails;
   String? dentistId;
@@ -64,7 +65,6 @@ class _DentClinicPageState extends State<DentClinicPage> {
       statusListener.subscribe((status) {
         if (mounted) setState(() => clinicDetails?['status'] = status);
       });
-
     });
   }
 
@@ -178,7 +178,7 @@ class _DentClinicPageState extends State<DentClinicPage> {
                                     /// STATUS
                                     Row(children: [
                                       const Icon(Icons.verified_user,
-                                          color: Color(0xFF103D7E)),
+                                          color: AppTheme.primaryBlue),
                                       const SizedBox(width: 10),
                                       const Text("Status:",
                                           style: TextStyle(
@@ -217,7 +217,7 @@ class _DentClinicPageState extends State<DentClinicPage> {
                                     style:
                                         TextStyle(fontWeight: FontWeight.w700)),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: kPrimary,
+                                  backgroundColor: AppTheme.primaryBlue,
                                   foregroundColor: Colors.white,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 14),
@@ -242,7 +242,7 @@ class _DentClinicPageState extends State<DentClinicPage> {
   Widget _infoBox(String label, String value) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Icon(Icons.apartment, color: Color(0xFF103D7E)),
+          const Icon(Icons.apartment, color: AppTheme.primaryBlue),
           const SizedBox(width: 10),
           Text(label,
               style: const TextStyle(
@@ -285,7 +285,7 @@ class _DentClinicPageState extends State<DentClinicPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-          color: col.withOpacity(.15),
+          color: col.withValues(alpha: .15),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: col)),
       child: Text(status,
@@ -304,13 +304,10 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x14000000), blurRadius: 10, offset: Offset(0, 6))
-          ],
+          border: Border.all(color: AppTheme.dividerColor),
+          boxShadow: AppTheme.cardShadow,
         ),
         child: child,
       );
@@ -324,7 +321,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          Icon(icon, color: Color(0xFF103D7E)),
+          Icon(icon, color: AppTheme.primaryBlue),
           const SizedBox(width: 8),
           Text(title,
               style:

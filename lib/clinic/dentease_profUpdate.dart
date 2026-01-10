@@ -1,4 +1,5 @@
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,9 +23,13 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
   bool isLoading = false;
 
   Future<void> _uploadImage(XFile? file) async {
-    if (file == null) return;
+    if (file == null) {
+      debugPrint('📸 [ClinicProfUpdate] No image selected');
+      return;
+    }
 
     try {
+      debugPrint('📸 [ClinicProfUpdate] Starting upload for: ${file.path}');
       setState(() {
         isLoading = true;
       });
@@ -33,6 +38,8 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
       final fileName =
           'clinic_${widget.clinicId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
+      debugPrint(
+          '📡 [ClinicProfUpdate] Uploading to Storage bucket: clinic-profile');
       await supabase.storage.from('clinic-profile').uploadBinary(
             fileName,
             fileBytes,
@@ -41,9 +48,13 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
 
       final newImageUrl =
           supabase.storage.from('clinic-profile').getPublicUrl(fileName);
+      debugPrint(
+          '✅ [ClinicProfUpdate] Image uploaded. Public URL: $newImageUrl');
 
+      debugPrint('📡 [ClinicProfUpdate] Updating clinic record in DB...');
       await supabase.from('clinics').update({'profile_url': newImageUrl}).eq(
           'clinic_id', widget.clinicId);
+      debugPrint('✅ [ClinicProfUpdate] DB updated successfully');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +95,9 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Update Profile Image', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: const Text('Update Profile Image',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           elevation: 0,
@@ -101,16 +114,10 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade300),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x14000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 6),
-                        ),
-                      ],
+                      border: Border.all(color: AppTheme.dividerColor),
+                      boxShadow: AppTheme.cardShadow,
                     ),
                     child: Column(
                       children: [
@@ -146,30 +153,24 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
                       ],
                     ),
                   ),
-      
+
                   const SizedBox(height: 16),
-      
+
                   // Actions card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade300),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x14000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 6),
-                        ),
-                      ],
+                      border: Border.all(color: AppTheme.dividerColor),
+                      boxShadow: AppTheme.cardShadow,
                     ),
                     child: Column(
                       children: [
                         Row(
                           children: const [
-                            Icon(Icons.photo, color: Color(0xFF103D7E)),
+                            Icon(Icons.photo, color: AppTheme.primaryBlue),
                             SizedBox(width: 8),
                             Text(
                               "Select a new image",
@@ -197,9 +198,9 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
                                 icon: const Icon(Icons.image),
                                 label: const Text('Gallery'),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF103D7E),
-                                  side:
-                                      const BorderSide(color: Color(0xFF103D7E)),
+                                  foregroundColor: AppTheme.primaryBlue,
+                                  side: const BorderSide(
+                                      color: AppTheme.primaryBlue),
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                 ),
@@ -220,9 +221,9 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
                                 icon: const Icon(Icons.photo_camera),
                                 label: const Text('Camera'),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF103D7E),
-                                  side:
-                                      const BorderSide(color: Color(0xFF103D7E)),
+                                  foregroundColor: AppTheme.primaryBlue,
+                                  side: const BorderSide(
+                                      color: AppTheme.primaryBlue),
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                 ),
@@ -241,7 +242,7 @@ class _UpdateProfileImageState extends State<UpdateProfileImage> {
                 ],
               ),
             ),
-      
+
             // Loading overlay
             if (isLoading)
               Container(

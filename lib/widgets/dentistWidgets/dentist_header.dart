@@ -29,7 +29,7 @@ class _DentistHeaderState extends State<DentistHeader> {
     try {
       final data = await Supabase.instance.client
           .from('dentists')
-          .select('profile_url, firstname, lastname')
+          .select('profile_url, firstname, lastname, fcm_token')
           .eq('dentist_id', user.id)
           .maybeSingle();
 

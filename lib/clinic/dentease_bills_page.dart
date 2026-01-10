@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
+import 'package:dentease/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BillCalculatorPage extends StatefulWidget {
   final String clinicId;
@@ -27,18 +32,27 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
+  // Controllers
   final TextEditingController serviceNameController = TextEditingController();
   final TextEditingController servicePriceController = TextEditingController();
-  final TextEditingController doctorFeeController = TextEditingController();
-  final TextEditingController medicineFeeController = TextEditingController();
+  final TextEditingController doctorFeeController =
+      TextEditingController(); // Re-purposed for "Additional Items / Details"
+  final TextEditingController additionalPriceController =
+      TextEditingController(); // "Additional Item Price" (Number)
+  // final TextEditingController medicineFeeController = TextEditingController(); // Removed
   final TextEditingController totalAmountController = TextEditingController();
   final TextEditingController receivedMoneyController = TextEditingController();
 
   double? change;
   bool loading = true;
   String? patientName;
+  String? patientPhone;
+  String? patientAge;
+  File? _billImage;
+  String? _uploadedImageUrl;
+  bool _isSubmitting = false;
 
-  String? selectedPaymentMode;
+  String? selectedPaymentMode = 'Cash'; // Set Cash as default
   final List<String> paymentModes = [
     'Cash',
     'GCash',
@@ -56,6 +70,19 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     _loadBill();
     _loadPatientName();
     receivedMoneyController.addListener(_calculateChange);
+    additionalPriceController.addListener(_calculateTotal);
+  }
+
+  void _calculateTotal() {
+    final sPrice = double.tryParse(servicePriceController.text) ?? 0;
+    final addPrice = double.tryParse(additionalPriceController.text) ?? 0;
+    final total = sPrice + addPrice;
+
+    // Update total text
+    if (double.tryParse(totalAmountController.text) != total) {
+      totalAmountController.text = total.toStringAsFixed(2);
+    }
+    _calculateChange();
   }
 
   void _calculateChange() {
@@ -87,18 +114,46 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
   Future<void> _loadPatientName() async {
     try {
+      // Fetch via bookings table to ensure RLS allows access
+      // (Dentists can see bookings, and thus the linked patient details)
       final response = await supabase
-          .from('patients')
-          .select('firstname, lastname')
-          .eq('patient_id', widget.patientId)
-          .single();
+          .from('bookings')
+          .select('patients(firstname, lastname, phone, age)')
+          .eq('booking_id', widget.bookingId)
+          .maybeSingle();
 
-      setState(() {
-        patientName = "${response['firstname']} ${response['lastname']}";
-      });
+      if (response != null && response['patients'] != null) {
+        final p = response['patients'];
+        setState(() {
+          patientName = "${p['firstname']} ${p['lastname']}";
+          patientPhone = p['phone'] ?? 'No phone';
+          patientAge = p['age']?.toString() ?? 'Not specified';
+        });
+      } else {
+        // Fallback to direct fetch if join fails for some reason
+        final directResponse = await supabase
+            .from('patients')
+            .select('firstname, lastname, phone, age')
+            .eq('patient_id', widget.patientId)
+            .maybeSingle();
+
+        if (directResponse != null) {
+          setState(() {
+            patientName =
+                "${directResponse['firstname']} ${directResponse['lastname']}";
+            patientPhone = directResponse['phone'] ?? 'No phone';
+            patientAge = directResponse['age']?.toString() ?? 'Not specified';
+          });
+        } else {
+          throw Exception("Patient not found");
+        }
+      }
     } catch (e) {
+      debugPrint("Error loading patient: $e");
       setState(() {
         patientName = "Unknown Patient";
+        patientPhone = "No phone";
+        patientAge = "Not specified";
       });
     }
   }
@@ -116,6 +171,9 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         servicePriceController.text = (result['service_price'] != null)
             ? result['service_price'].toString()
             : '';
+
+        // Auto-calculate total
+        _calculateTotal();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("No service found.")),
@@ -146,6 +204,59 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
     return null;
   }
 
+  /// Pick image from camera or gallery
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+
+    if (pickedFile != null) {
+      setState(() {
+        _billImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  /// Upload image to Supabase storage
+  Future<String?> _uploadBillImage() async {
+    if (_billImage == null) return null;
+
+    try {
+      final fileName =
+          'bill_${widget.bookingId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final bytes = await _billImage!.readAsBytes();
+
+      await supabase.storage.from('bills').uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+
+      final publicUrl = supabase.storage.from('bills').getPublicUrl(fileName);
+      debugPrint('Bill image uploaded successfully: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading bill image: $e');
+
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading photo: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+
+      return null;
+    }
+  }
+
   Future<void> _submitBill() async {
     // Ensure all required fields/validators pass before submit
     if (!_formKey.currentState!.validate()) {
@@ -157,14 +268,18 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
     final serviceName = serviceNameController.text.trim();
     final servicePrice = servicePriceController.text.trim();
-    final medicineFee = medicineFeeController.text.trim();
-    final doctorFee = doctorFeeController.text.trim();
+    final additionalPriceText = additionalPriceController.text.trim();
+    // final medicineFee = medicineFeeController.text.trim(); // Removed
+    final doctorFee =
+        doctorFeeController.text.trim(); // Now "Additional Items / Details"
     if (serviceName.isEmpty || servicePrice.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter valid service data.")),
       );
       return;
     }
+
+    setState(() => _isSubmitting = true);
 
     try {
       final existingBill = await supabase
@@ -179,6 +294,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
             content: Text("A bill already exists for this booking."),
           ),
         );
+        setState(() => _isSubmitting = false);
         return;
       }
 
@@ -193,17 +309,38 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
             backgroundColor: Colors.redAccent,
           ),
         );
+        setState(() => _isSubmitting = false);
         return;
       }
 
       final billChange = receivedMoney - totalAmount;
 
+      // Upload bill image if available
+      String? imageUrl;
+      if (_billImage != null) {
+        imageUrl = await _uploadBillImage();
+
+        // Warn user if image upload failed but continue with bill submission
+        if (imageUrl == null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Warning: Receipt image could not be uploaded. Bill will be saved without image.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+
       final Map<String, dynamic> billData = {
         'service_id': widget.serviceId,
         'service_name': serviceName,
         'service_price': servicePrice,
-        'medicine_fee': medicineFee,
-        'doctor_fee': doctorFee,
+        'medicine_fee': double.tryParse(additionalPriceText) ??
+            0, // Saving Additional Price in medicine_fee column
+        'doctor_fee':
+            doctorFee, // Storing "details" in doctor_fee column for now (or rename col in DB if needed)
         'clinic_id': widget.clinicId,
         'patient_id': widget.patientId,
         'booking_id': widget.bookingId,
@@ -211,28 +348,31 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         'recieved_money': receivedMoney,
         'bill_change': billChange,
         'payment_mode': selectedPaymentMode,
+        if (imageUrl != null) 'image_url': imageUrl,
       };
 
       await supabase.from('bills').insert(billData);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bill submitted successfully.")),
-      );
+      // Update booking status to completed
+      await supabase.from('bookings').update({
+        'status': 'completed',
+        'completed_at': DateTime.now().toIso8601String(),
+      }).eq('booking_id', widget.bookingId);
 
-      serviceNameController.clear();
-      servicePriceController.clear();
-      medicineFeeController.clear();
-      doctorFeeController.clear();
-      receivedMoneyController.clear();
-      setState(() {
-        selectedPaymentMode = null;
-        totalAmountController.clear();
-        change = null;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Bill sent and treatment marked as completed!"),
+            backgroundColor: Colors.green.shade600,
+          ),
+        );
+        Navigator.pop(context, true); // Return true to refresh list
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Submission failed: $e")),
       );
+      setState(() => _isSubmitting = false);
     }
   }
 
@@ -240,7 +380,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
   void dispose() {
     serviceNameController.dispose();
     servicePriceController.dispose();
-    medicineFeeController.dispose();
+    // medicineFeeController.dispose();
     doctorFeeController.dispose();
     totalAmountController.dispose();
     receivedMoneyController.dispose();
@@ -249,8 +389,6 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    const kPrimary = Color(0xFF103D7E);
-
     return BackgroundCont(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -275,6 +413,28 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     children: [
+                      // Patient Information Card
+                      _SectionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionTitle(
+                              icon: Icons.person,
+                              title: 'Patient Information',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildInfoRow(Icons.person, 'Name',
+                                patientName ?? 'Loading...'),
+                            _buildInfoRow(Icons.phone, 'Phone',
+                                patientPhone ?? 'Loading...'),
+                            _buildInfoRow(
+                                Icons.cake, 'Age', patientAge ?? 'Loading...'),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
                       // Service details
                       _SectionCard(
                         child: Column(
@@ -296,6 +456,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                               controller: servicePriceController,
                               label: 'Service Price',
                               icon: Icons.payments_outlined,
+                              number: true,
                               readOnly: true,
                             ),
                           ],
@@ -304,27 +465,49 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
 
                       const SizedBox(height: 12),
 
-                      // Fees
+                      // Additional Items
                       _SectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const _SectionTitle(
                               icon: Icons.medical_services,
-                              title: 'Fees',
+                              title: 'Additional Items / Details',
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller:
+                                  doctorFeeController, // Repurposing doctorFee controller for details
+                              keyboardType: TextInputType.multiline,
+                              maxLines: 4,
+                              minLines: 2,
+                              decoration: InputDecoration(
+                                labelText:
+                                    "List used medicine, anesthesia, etc...",
+                                prefixIcon: const Icon(Icons.list_alt,
+                                    color: AppTheme.primaryBlue),
+                                filled: true,
+                                fillColor: Colors.white,
+                                alignLabelWithHint: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             _buildFormField(
-                              controller: medicineFeeController,
-                              label: 'Medicine Fee',
-                              icon: Icons.local_pharmacy_outlined,
+                              controller: additionalPriceController,
+                              label: 'Additional Fees',
+                              icon: Icons.attach_money,
+                              number: true,
+                              validator: (v) => _numberValidator(v),
                             ),
-                            const SizedBox(height: 10),
-                            _buildFormField(
-                              controller: doctorFeeController,
-                              label: 'Additional Fee',
-                              icon: Icons.medical_services_outlined,
-                            )
                           ],
                         ),
                       ),
@@ -342,7 +525,8 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              initialValue: selectedPaymentMode,
+                              initialValue:
+                                  selectedPaymentMode, // This will now default to 'Cash'
                               items: paymentModes
                                   .map(
                                     (mode) => DropdownMenuItem(
@@ -403,12 +587,14 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                       _SectionCard(
                         child: Row(
                           children: [
-                            const Icon(Icons.receipt_long, color: kPrimary),
+                            const Icon(Icons.receipt_long,
+                                color: AppTheme.primaryBlue),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 change != null
-                                    ? "Change: PHP ${change!.toStringAsFixed(2)}"
+                                    ? CurrencyFormatter.formatPesoWithText(
+                                        change!)
                                     : "Enter received amount to compute change",
                                 style: TextStyle(
                                   fontSize: 16,
@@ -425,15 +611,95 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                         ),
                       ),
 
+                      const SizedBox(height: 12),
+
+                      // Bill Photo Section
+                      _SectionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionTitle(
+                              icon: Icons.camera_alt,
+                              title: 'Bill Photo (Optional)',
+                            ),
+                            const SizedBox(height: 12),
+                            if (_billImage != null)
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.file(
+                                      _billImage!,
+                                      width: double.infinity,
+                                      height: 200,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _billImage = null;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: () =>
+                                        _pickImage(ImageSource.camera),
+                                    icon: const Icon(Icons.camera_alt),
+                                    label: const Text('Take Photo'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryBlue,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                  ElevatedButton.icon(
+                                    onPressed: () =>
+                                        _pickImage(ImageSource.gallery),
+                                    icon: const Icon(Icons.photo_library),
+                                    label: const Text('Gallery'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.textGrey,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+
                       const SizedBox(height: 18),
 
-                      // Submit
+                      // Submit Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _submitBill,
+                          onPressed: _isSubmitting ? null : _submitBill,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimary,
+                            backgroundColor: AppTheme.successColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -441,11 +707,21 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                             ),
                             elevation: 2,
                           ),
-                          child: const Text(
-                            "Submit Bill",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  "Send Bill & Complete",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -453,6 +729,37 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  // Info row for patient details
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppTheme.primaryBlue),
+          const SizedBox(width: 12),
+          Text(
+            '$label: ',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: AppTheme.textGrey,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -475,7 +782,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
           : TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF103D7E)),
+        prefixIcon: Icon(icon, color: AppTheme.primaryBlue),
         filled: true,
         fillColor: Colors.white,
         contentPadding:
@@ -483,7 +790,7 @@ class _BillCalculatorPageState extends State<BillCalculatorPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppTheme.dividerColor),
         ),
       ),
     );
@@ -501,16 +808,10 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: child,
     );
@@ -524,15 +825,14 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF103D7E);
     return Row(
       children: [
-        Icon(icon, color: color),
+        Icon(icon, color: AppTheme.primaryBlue),
         const SizedBox(width: 8),
         Text(
           title,
           style: const TextStyle(
-            color: Colors.black87,
+            color: AppTheme.textDark,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),

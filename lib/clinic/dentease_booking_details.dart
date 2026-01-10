@@ -1,6 +1,7 @@
 import 'package:dentease/clinic/dentease_bills_page.dart';
 import 'package:dentease/clinic/dentease_edit_bills.dart';
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
@@ -33,8 +34,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   Map<String, dynamic>? bill;
   bool loading = true;
   bool uploading = false;
-
-  static const Color kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -159,8 +158,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               label: const Text('Take A Photo'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
-                backgroundColor: kPrimary,
-                side: const BorderSide(color: kPrimary),
+                backgroundColor: AppTheme.primaryBlue,
+                side: const BorderSide(color: AppTheme.primaryBlue),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -190,13 +189,17 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   Widget build(BuildContext context) {
     final booking = widget.booking;
 
-    final serviceName = booking['services']?['service_name']?.toString() ?? 'N/A';
+    final serviceName =
+        booking['services']?['service_name']?.toString() ?? 'N/A';
     final servicePrice =
         booking['services']?['service_price']?.toString() ?? 'N/A';
     final patientName =
-        "${booking['patients']?['firstname'] ?? ''} ${booking['patients']?['lastname'] ?? ''}".trim();
+        "${booking['patients']?['firstname'] ?? ''} ${booking['patients']?['lastname'] ?? ''}"
+            .trim();
     final patientEmail = booking['patients']?['email']?.toString() ?? 'N/A';
     final patientPhone = booking['patients']?['phone']?.toString() ?? 'N/A';
+    final patientAge =
+        booking['patients']?['age']?.toString() ?? 'Not specified';
     final dateBooked = booking['date']?.toString() ?? '';
 
     final beforeUrl = booking['before_url']?.toString();
@@ -240,9 +243,10 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                         _buildDetailRow("Patient name:", patientName),
                         _buildDetailRow("Patient email:", patientEmail),
                         _buildDetailRow("Patient phone number:", patientPhone),
+                        _buildDetailRow("Patient age:", patientAge),
                         if (dateBooked.isNotEmpty)
-                          _buildDetailRow(
-                              "Service date booked:", formatDateTime(dateBooked)),
+                          _buildDetailRow("Service date booked:",
+                              formatDateTime(dateBooked)),
                       ],
                     ),
                   ),
@@ -280,7 +284,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: kPrimary,
+                                  backgroundColor: AppTheme.primaryBlue,
                                   foregroundColor: Colors.white,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
@@ -288,8 +292,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                icon: const Icon(Icons.send),
-                                label: const Text("Send Bill"),
+                                icon: const Icon(Icons.receipt_long),
+                                label: const Text("Send Billing Now"),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -311,7 +315,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: kPrimary,
+                                  backgroundColor: AppTheme.primaryBlue,
                                   foregroundColor: Colors.white,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 12),
@@ -348,14 +352,11 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                                     title: 'Bill Details',
                                   ),
                                   const SizedBox(height: 10),
-                                  _buildDetailRow(
-                                      "Service name:", serviceName),
+                                  _buildDetailRow("Service name:", serviceName),
                                   _buildDetailRow("Service Price:",
                                       "${bill!['service_price']}"),
-                                  _buildDetailRow("Medicine fee:",
+                                  _buildDetailRow("Additional Fees:",
                                       "${bill!['medicine_fee']}"),
-                                  _buildDetailRow("Additional fee:",
-                                      "${bill!['doctor_fee']}"),
                                   _buildDetailRow("Payment Method:",
                                       "${bill!['payment_mode']}"),
                                   _buildDetailRow("Total Amount:",
@@ -373,9 +374,12 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                   ),
                   const SizedBox(height: 12),
 
+                  // Bill Receipt Image - prioritize bill image_url over before_url
                   _photoTile(
-                    title: 'Receipt',
-                    url: beforeUrl,
+                    title: 'Bill Receipt',
+                    url: bill != null && bill!['image_url'] != null
+                        ? bill!['image_url'].toString()
+                        : beforeUrl,
                     onCapture: _beforeImageandUpload,
                   ),
                   const SizedBox(height: 54),
@@ -451,7 +455,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: const [
-                    BoxShadow(
+          BoxShadow(
             color: Color(0x14000000),
             blurRadius: 10,
             offset: Offset(0, 6),
@@ -475,10 +479,22 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [],
+      children: [
+        Icon(icon, color: AppTheme.primaryBlue),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppTheme.textDark,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
+
 class FullScreenImage extends StatelessWidget {
   final String imageUrl;
   const FullScreenImage({super.key, required this.imageUrl});

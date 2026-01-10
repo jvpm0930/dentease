@@ -1,11 +1,13 @@
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StaffHeader extends StatefulWidget {
   const StaffHeader({super.key});
 
   @override
-  _StaffHeaderState createState() => _StaffHeaderState();
+  State<StaffHeader> createState() => _StaffHeaderState();
 }
 
 class _StaffHeaderState extends State<StaffHeader> {
@@ -29,7 +31,7 @@ class _StaffHeaderState extends State<StaffHeader> {
     try {
       final data = await Supabase.instance.client
           .from('staffs')
-          .select('profile_url, firstname, lastname')
+          .select('profile_url, firstname, lastname, fcm_token')
           .eq('staff_id', user.id)
           .maybeSingle();
 
@@ -55,54 +57,59 @@ class _StaffHeaderState extends State<StaffHeader> {
             ? '${firstname ?? ''} ${lastname ?? ''}'.trim()
             : (userEmail ?? 'Loading...');
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 50, left: 20, right: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryBlue,
+            AppTheme.primaryBlue.withValues(alpha: 0.8),
+          ],
+        ),
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.grey[300],
-                backgroundImage: profileUrl != null
-                    ? NetworkImage(profileUrl!)
-                    : const AssetImage('assets/profile.png') as ImageProvider,
-                child: (profileUrl == null)
-                    ? const Icon(Icons.person, size: 30, color: Colors.grey)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Hello staff,',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Text(
-                      displayName,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            backgroundImage: profileUrl != null
+                ? NetworkImage(profileUrl!)
+                : const AssetImage('assets/profile.png') as ImageProvider,
+            child: (profileUrl == null)
+                ? const Icon(Icons.person_rounded,
+                    size: 30, color: Colors.white)
+                : null,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Hello staff,',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                Text(
+                  displayName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

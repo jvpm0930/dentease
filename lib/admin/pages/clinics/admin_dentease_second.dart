@@ -25,8 +25,7 @@ class AdmClinicDashboardPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: Text(
           title,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -44,8 +43,11 @@ class AdmClinicDashboardPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
+          leading: const BackButton(color: Colors.black),
           foregroundColor: Colors.white,
-          title: Text(clinicName, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text(clinicName,
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16),
@@ -69,7 +71,8 @@ class AdmClinicDashboardPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdmClinicStaffsPage(clinicId: clinicId),
+                      builder: (context) =>
+                          AdmClinicStaffsPage(clinicId: clinicId),
                     ),
                   );
                 },
@@ -93,7 +96,8 @@ class AdmClinicDashboardPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdmClinicDetailsPage(clinicId: clinicId),
+                      builder: (context) =>
+                          AdmClinicDetailsPage(clinicId: clinicId),
                     ),
                   );
                 },

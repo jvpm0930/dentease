@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class BackgroundCont extends StatelessWidget {
   final Widget child;
@@ -8,13 +9,10 @@ class BackgroundCont extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/background1.png'), //  Correct path
-          fit: BoxFit.cover, // Makes the image cover the full screen
-        ),
+      decoration: const BoxDecoration(
+        gradient: AppTheme.primaryGradient,
       ),
-      child: child, // Pass the page content inside this container
+      child: child,
     );
   }
 }

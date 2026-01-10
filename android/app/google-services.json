@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "601897981822",
+    "project_id": "dentease-2349d",
+    "storage_bucket": "dentease-2349d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601897981822:android:82ef9c3e1d53cf7235c52f",
+        "android_client_info": {
+          "package_name": "com.example.dentease"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzpKtkXYq42CZnnsRPsOjlOiXKcdoHp5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

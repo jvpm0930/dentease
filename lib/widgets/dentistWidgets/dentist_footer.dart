@@ -1,15 +1,18 @@
-import 'package:dentease/clinic/models/clinicChat_support.dart';
+import 'package:dentease/chat/chat_screen.dart';
+import 'package:dentease/services/messaging_service.dart';
 import 'package:dentease/dentist/dentist_bookings_pend.dart';
 import 'package:dentease/dentist/dentist_profile.dart';
-import 'package:dentease/dentist/dentist_page.dart';
-import 'package:dentease/clinic/models/clinic_patientchat_list.dart';
+import 'package:dentease/dentist/dentist_main_layout.dart';
+import 'package:dentease/dentist/chat/dentist_chat_hub.dart';
+import 'package:dentease/theme/app_theme.dart';
+
+import 'package:dentease/logic/safe_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 // Initialize notifications
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -48,7 +51,6 @@ Future<void> showLocalNotification(String title, String body) async {
   );
 }
 
-
 class DentistFooter extends StatefulWidget {
   final String dentistId;
   final String clinicId;
@@ -64,11 +66,15 @@ class DentistFooter extends StatefulWidget {
 }
 
 class _DentistFooterState extends State<DentistFooter> {
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
 
   bool hasUnreadMessages = false;
   bool hasNewBookings = false;
   bool hasNewSupports = false;
+
+  final MessagingService _messagingService = MessagingService();
+  StreamSubscription? _unreadSubscription;
   Timer? refreshTimer;
 
   String? lastNotifiedMessageId;
@@ -79,18 +85,24 @@ class _DentistFooterState extends State<DentistFooter> {
   final Set<String> notifiedMessageIds = {};
   final Set<String> notifiedSupportIds = {};
 
-
   @override
   void initState() {
     super.initState();
     initNotifications();
     loadNotifiedIds();
-    notifiedMessageIds.clear();
-    fetchUnreadMessages();
-    notifiedBookingIds.clear();
+
+    // Use Stream for chat badges
+    _unreadSubscription = _messagingService
+        .streamTotalUnreadCount(widget.clinicId)
+        .listen((count) {
+      if (mounted) {
+        setState(() {
+          hasUnreadMessages = count > 0;
+        });
+      }
+    });
+
     fetchNewBookings();
-    notifiedSupportIds.clear();
-    fetchNewSupports();
     startAutoRefresh();
   }
 
@@ -101,10 +113,8 @@ class _DentistFooterState extends State<DentistFooter> {
   }
 
   void startAutoRefresh() {
-    refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      fetchUnreadMessages();
+    refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       fetchNewBookings();
-      fetchNewSupports();
     });
   }
 
@@ -142,39 +152,30 @@ class _DentistFooterState extends State<DentistFooter> {
           .from('supports')
           .select('support_id, message, sender_id')
           .eq('receiver_id', widget.clinicId)
-          .or('is_read.eq.false,is_read.eq.FALSE,is_read.is.null')
+          .eq('is_read', false)
           .order('timestamp', ascending: true);
 
       if (response.isNotEmpty) {
         setState(() => hasNewSupports = true);
-
-        //  Load saved notified message IDs (persistent)
         final prefs = await SharedPreferences.getInstance();
         final savedIds = prefs.getStringList('notifiedSupportIds') ?? [];
         final notifiedSupportIds = savedIds.toSet();
 
         for (var msg in response) {
           final supportId = msg['support_id'].toString();
-
-          // Only notify if not already notified
           if (!notifiedSupportIds.contains(supportId)) {
             notifiedSupportIds.add(supportId);
-
-            // Save updated set persistently
             await prefs.setStringList(
                 'notifiedSupportIds', notifiedSupportIds.toList());
-
-            await showLocalNotification(
-              'New message from Support',
-              msg['message'] ?? 'Sent you a message',
-            );
+            await showLocalNotification('New message from Support',
+                msg['message'] ?? 'Sent you a message');
           }
         }
       } else {
         setState(() => hasNewSupports = false);
       }
     } catch (e) {
-      debugPrint('Error fetching supports messages');
+      debugPrint('Error fetching support dots: $e');
     }
   }
 
@@ -231,7 +232,6 @@ class _DentistFooterState extends State<DentistFooter> {
     }
   }
 
-
   // Check for new pending bookings
   Future<void> fetchNewBookings() async {
     try {
@@ -277,7 +277,6 @@ class _DentistFooterState extends State<DentistFooter> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Positioned(
@@ -287,7 +286,7 @@ class _DentistFooterState extends State<DentistFooter> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF103D7E), // solid blue (#103D7E)
+          color: AppTheme.primaryBlue, // solid blue (#103D7E)
           borderRadius: BorderRadius.circular(30),
           boxShadow: const [
             BoxShadow(
@@ -301,11 +300,10 @@ class _DentistFooterState extends State<DentistFooter> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildNavImage(
+            // Home button - uses pushAndRemoveUntil to clear stack
+            _buildHomeButton(
               'assets/icons/home.png',
               context,
-              DentistPage(
-                  clinicId: widget.clinicId, dentistId: widget.dentistId),
             ),
 
             //  Calendar icon with red dot if pending bookings exist
@@ -363,12 +361,9 @@ class _DentistFooterState extends State<DentistFooter> {
                 ],
               ),
               onPressed: () {
-                Navigator.push(
+                SafeNavigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ClinicPatientChatList(clinicId: widget.clinicId),
-                  ),
+                  DentistChatHub(clinicId: widget.clinicId),
                 );
               },
             ),
@@ -398,17 +393,42 @@ class _DentistFooterState extends State<DentistFooter> {
                     ),
                 ],
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ClinicChatPageforAdmin(
-                        clinicId: widget.clinicId,
-                        adminId: 'eee5f574-903b-4575-a9d9-2f69e58f1801',
-                      ),
-                  ),
+              onPressed: () async {
+                // Fetch first admin ID
+                final adminRes = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('role', 'admin')
+                    .limit(1)
+                    .maybeSingle();
+                if (adminRes == null) return;
+                final adminId = adminRes['id'] as String;
+
+                // Get or Create Convo
+                final convoId =
+                    await _messagingService.getOrCreateDirectConversation(
+                  user1Id: widget.clinicId,
+                  user1Role: 'dentist',
+                  user1Name: 'Clinic',
+                  user2Id: adminId,
+                  user2Role: 'admin',
+                  user2Name: 'Admin Support',
+                  clinicId: widget.clinicId,
                 );
+
+                if (convoId != null && mounted) {
+                  SafeNavigator.push(
+                    context,
+                    ChatScreen(
+                      conversationId: convoId,
+                      userId: widget.clinicId,
+                      userRole: 'dentist',
+                      userName: 'Clinic',
+                      otherUserName: 'Admin Support',
+                      otherUserRole: 'admin',
+                    ),
+                  );
+                }
               },
             ),
             _buildNavImage(
@@ -432,9 +452,33 @@ class _DentistFooterState extends State<DentistFooter> {
       ),
       onPressed: page != null
           ? () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+              SafeNavigator.push(context, page);
             }
           : null,
+    );
+  }
+
+  /// Special home button that clears navigation stack
+  Widget _buildHomeButton(String imagePath, BuildContext context) {
+    return IconButton(
+      icon: Image.asset(
+        imagePath,
+        width: 30,
+        height: 30,
+        color: Colors.white,
+      ),
+      onPressed: () {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DentistMainLayout(
+              clinicId: widget.clinicId,
+              dentistId: widget.dentistId,
+            ),
+          ),
+          (route) => false,
+        );
+      },
     );
   }
 }

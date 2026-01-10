@@ -1,5 +1,6 @@
 import 'package:dentease/clinic/signup/dental_clinic_apply.dart';
 import 'package:dentease/widgets/background_container.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,6 +23,9 @@ class _DentalSignupState extends State<DentalSignup> {
   final lastnameController = TextEditingController();
   final passwordController = TextEditingController();
   final phoneController = TextEditingController();
+  final specializationController = TextEditingController();
+  final qualificationController = TextEditingController();
+  final experienceController = TextEditingController();
   late TextEditingController emailController;
   late TextEditingController clinicController;
   String selectedRole = 'dentist'; // Default role
@@ -50,6 +54,8 @@ class _DentalSignupState extends State<DentalSignup> {
 
   /// **Check if Firstname & Lastname Already Exist**
   Future<bool> _checkIfNameExists(String firstname, String lastname) async {
+    debugPrint(
+        '📡 [DentistSignup] Checking if name exists: $firstname $lastname');
     final response = await supabase
         .from('dentists')
         .select('dentist_id')
@@ -57,7 +63,9 @@ class _DentalSignupState extends State<DentalSignup> {
         .eq('lastname', lastname)
         .maybeSingle();
 
-    return response != null; // If response is not null, name exists
+    final exists = response != null;
+    debugPrint('📊 [DentistSignup] Name exists: $exists');
+    return exists;
   }
 
   /// ** Sign-Up Function with Duplicate Checks**
@@ -69,9 +77,18 @@ class _DentalSignupState extends State<DentalSignup> {
       final phone = phoneController.text.trim();
       final email = emailController.text.trim();
       final clinicId = clinicController.text.trim();
+      final specialization = specializationController.text.trim();
+      final qualification = qualificationController.text.trim();
+      final experienceYears =
+          int.tryParse(experienceController.text.trim()) ?? 0;
+
+      debugPrint(
+          '📝 [DentistSignup] Starting dentist verification for clinic: $clinicId');
+      debugPrint('📝 [DentistSignup] Dentist name: $firstname $lastname');
 
       // **Check for Empty Fields**
       if (firstname.isEmpty || lastname.isEmpty || password.isEmpty) {
+        debugPrint('⚠️ [DentistSignup] Validation failed - empty fields');
         _showSnackbar('Please fill in all fields.');
         return;
       }
@@ -83,15 +100,21 @@ class _DentalSignupState extends State<DentalSignup> {
       }
 
       // **Create User in Supabase Auth**
+      debugPrint('📡 [DentistSignup] Calling auth.signUp for email: $email');
       final authResponse = await supabase.auth.signUp(
         email: email,
         password: password,
       );
 
       final userId = authResponse.user?.id;
-      if (userId == null) throw 'User creation failed';
+      if (userId == null) {
+        debugPrint('❌ [DentistSignup] User ID is null after signUp');
+        throw 'User creation failed';
+      }
+      debugPrint('✅ [DentistSignup] Auth successful, UID: $userId');
 
       // **Store Additional User Info in dentists Table**
+      debugPrint('📡 [DentistSignup] Inserting data into dentists table...');
       await supabase.from('dentists').insert({
         'dentist_id': userId,
         'firstname': firstname,
@@ -99,9 +122,21 @@ class _DentalSignupState extends State<DentalSignup> {
         'email': email,
         'password': password,
         'phone': phone,
-        'clinic_id': clinicId, // Store clinic ID
-        'role': selectedRole, // Store selected role
+        'clinic_id': clinicId,
+        'role': selectedRole,
+        'specialization': specialization,
+        'qualification': qualification,
+        'experience_years': experienceYears,
+        'status': 'pending', // Set initial status to pending
       });
+      debugPrint('✅ [DentistSignup] Information saved to dentists table');
+
+      // **Update clinic's owner_id with the dentist's user ID**
+      debugPrint('📡 [DentistSignup] Updating clinic owner_id to: $userId');
+      await supabase
+          .from('clinics')
+          .update({'owner_id': userId}).eq('clinic_id', clinicId);
+      debugPrint('✅ [DentistSignup] Clinic owner_id updated');
 
       // **Success Message & Navigate to Login Page**
       _showSnackbar('Signup successful! Next More Details');
@@ -151,6 +186,18 @@ class _DentalSignupState extends State<DentalSignup> {
                 SizedBox(height: 10),
                 _buildTextField(phoneController, 'Phone Number', Icons.phone),
                 SizedBox(height: 10),
+                _buildTextField(
+                    specializationController,
+                    'Specialization (e.g. Orthodontist)',
+                    Icons.medical_services),
+                SizedBox(height: 10),
+                _buildTextField(qualificationController,
+                    'Qualification (e.g. DMD, DDS)', Icons.school),
+                SizedBox(height: 10),
+                _buildTextField(experienceController, 'Years of Experience',
+                    Icons.work_history,
+                    keyboardType: TextInputType.number),
+                SizedBox(height: 10),
                 Text(
                   '* Reminder: Use this Email and Password to Login *',
                   style: TextStyle(
@@ -192,13 +239,13 @@ class _DentalSignupState extends State<DentalSignup> {
         hintText: hint,
         prefixIcon: Padding(
           padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Icon(icon, color: Colors.indigo[900]),
+          child: Icon(icon, color: AppTheme.primaryBlue),
         ),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.indigo[900],
+                  color: AppTheme.primaryBlue,
                 ),
                 onPressed: () {
                   setState(() {
@@ -216,7 +263,7 @@ class _DentalSignupState extends State<DentalSignup> {
     return ElevatedButton(
       onPressed: signUp,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey[300],
+        backgroundColor: AppTheme.cardBackground.withValues(alpha: 0.9),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(50),
         ),
@@ -229,7 +276,7 @@ class _DentalSignupState extends State<DentalSignup> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.indigo[900],
+          color: AppTheme.primaryBlue,
         ),
       ),
     );

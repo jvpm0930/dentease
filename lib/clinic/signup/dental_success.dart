@@ -1,9 +1,53 @@
 import 'package:dentease/login/login_screen.dart';
 import 'package:dentease/widgets/background_container.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-class DentalSuccess extends StatelessWidget {
+class DentalSuccess extends StatefulWidget {
   const DentalSuccess({super.key});
+
+  @override
+  State<DentalSuccess> createState() => _DentalSuccessState();
+}
+
+class _DentalSuccessState extends State<DentalSuccess>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.3, 1.0, curve: Curves.easeInOut),
+    ));
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,137 +61,142 @@ class DentalSuccess extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
-                  Image.asset(
-                    'assets/logo2.png',
-                    width: MediaQuery.of(context).size.width * 0.6,
-                    fit: BoxFit.contain,
+                  // Animated Success Icon
+                  AnimatedBuilder(
+                    animation: _scaleAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_rounded,
+                            size: 80,
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
 
-                  // Success Title
-                  Text(
-                    'Registration Successful!',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  // Animated Title
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: const Text(
+                      'Application Sent!',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
 
-                  // Message Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.white.withOpacity(0.9),
-                          size: 32,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Your clinic application has been submitted successfully.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white.withOpacity(0.95),
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'You can now Login, Please wait for admin verification to put your clinic live on our platform.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.85),
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Login Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => LoginScreen()),
-                          (route) => false,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Theme.of(context).primaryColor,
-                        elevation: 4,
-                        shadowColor: Colors.black.withOpacity(0.3),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  // Animated Message
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1,
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
                         children: [
-                          Text(
-                            'Proceed to Login',
+                          Icon(
+                            Icons.notifications_active_rounded,
+                            color: Colors.white.withValues(alpha: 0.9),
+                            size: 32,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'We will notify you once Admin verifies your details.',
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.5,
+                              fontWeight: FontWeight.w500,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20),
+                          const SizedBox(height: 12),
+                          Text(
+                            'You can now login and wait for approval to access the full platform.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              height: 1.4,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 40),
 
-                  // Additional Help Text
-                  TextButton.icon(
-                    onPressed: () {
-                      // Add support/help navigation if needed
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text('Need Help?'),
-                          content: Text(
-                            'If you have any questions about the verification process, please contact our support team.',
+                  // Return to Login Button
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      width: double.infinity,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardBackground,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: AppTheme.cardShadow,
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text('OK'),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.login_rounded,
+                              color: AppTheme.primaryBlue,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Return to Login',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
                             ),
                           ],
                         ),
-                      );
-                    },
-                    icon: Icon(
-                      Icons.help_outline,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                    label: Text(
-                      'Need Help?',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 14,
                       ),
                     ),
                   ),

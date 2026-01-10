@@ -1,11 +1,14 @@
 import 'dart:io';
 
-import 'package:dentease/patients/patient_clinicv2.dart';
-import 'package:dentease/patients/patient_pagev2.dart';
+import 'package:dentease/theme/app_theme.dart';
+import 'package:dentease/utils/currency_formatter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:dentease/clinic/logic/ml_inference_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dentease/patients/patient_booking.dart';
+import 'package:dentease/patients/patient_main_layout.dart';
 
 /*
  * DENTAL AI SCANNER - TWO-STAGE ML INFERENCE PIPELINE
@@ -14,13 +17,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
  * 
  * STAGE 1: Validator Model (teeth vs non_teeth)
  * - Determines if the image contains oral/dental content
- * - If non_teeth: Show "No Oral Issues Detected"
- * - If low confidence: Show "Can't Recognize"
+ * - If non_teeth: Show "Can't Recognize"
+ * - If low confidence: Show "Can't Classified"
  * 
  * STAGE 2: Disease Model (7-class classification)
  * - Runs ONLY if validator detects teeth
  * - Predicts one of 7 supported diseases
- * - If unsupported disease: Show "Can't Recognize"
+ * - If unsupported disease: Show "Can't Classified"
  * 
  * Key Features:
  * - No mock/demo/fake prediction data
@@ -82,66 +85,73 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   String diseaseDescription = '';
   List<Map<String, dynamic>> services = [];
   List<ModelPrediction> predictions = []; // DEPRECATED - kept for compatibility
-  
+
   // ML Inference Service
   final MLInferenceService _mlService = MLInferenceService();
   MLInferenceResult? _currentResult;
   bool _isAnalyzing = false;
-  
+
   // ============================================
   // 🔧 CRASH FIX: Lifecycle safety flags
   // ============================================
-  bool _isPickingImage = false;  // Prevents multiple ImagePicker calls
-  bool _isDisposed = false;      // Tracks widget disposal for async safety
+  bool _isPickingImage = false; // Prevents multiple ImagePicker calls
+  bool _isDisposed = false; // Tracks widget disposal for async safety
 
   // Medical conditions mapping - ONLY for UI display, no confidence data
   static const Map<String, MedicalCondition> medicalConditions = {
     "CaS": MedicalCondition(
       code: "CaS",
       fullName: "Dental Caries",
-      description: "Tooth decay caused by bacterial acid production. Early intervention can prevent further damage and preserve tooth structure.",
+      description:
+          "Tooth decay caused by bacterial acid production. Early intervention can prevent further damage and preserve tooth structure.",
       severity: "Moderate Attention",
       severityColor: Color(0xFFFF9800),
     ),
     "CoS": MedicalCondition(
       code: "CoS",
       fullName: "Calculus Buildup",
-      description: "Hardened plaque deposits on teeth surfaces. Professional cleaning is recommended to prevent gum disease and maintain oral health.",
+      description:
+          "Hardened plaque deposits on teeth surfaces. Professional cleaning is recommended to prevent gum disease and maintain oral health.",
       severity: "Low Attention",
       severityColor: Color(0xFF4CAF50),
     ),
     "Gum": MedicalCondition(
       code: "Gum",
       fullName: "Gingivitis",
-      description: "Inflammation of the gums caused by bacterial plaque. Proper oral hygiene and professional treatment can reverse this condition.",
+      description:
+          "Inflammation of the gums caused by bacterial plaque. Proper oral hygiene and professional treatment can reverse this condition.",
       severity: "Moderate Attention",
       severityColor: Color(0xFFFF9800),
     ),
     "MC": MedicalCondition(
       code: "MC",
       fullName: "Oral Malignancy Indicators",
-      description: "Potential signs of oral cancer detected. Immediate professional evaluation is strongly recommended for proper diagnosis.",
+      description:
+          "Potential signs of oral cancer detected. Immediate professional evaluation is strongly recommended for proper diagnosis.",
       severity: "High Attention",
       severityColor: Color(0xFFF44336),
     ),
     "OC": MedicalCondition(
       code: "OC",
       fullName: "Oral Cancer Signs",
-      description: "Suspicious lesions that may indicate oral cancer. Urgent dental consultation required for comprehensive examination.",
+      description:
+          "Suspicious lesions that may indicate oral cancer. Urgent dental consultation required for comprehensive examination.",
       severity: "High Attention",
       severityColor: Color(0xFFF44336),
     ),
     "OLP": MedicalCondition(
       code: "OLP",
       fullName: "Oral Lichen Planus",
-      description: "Chronic inflammatory condition affecting oral tissues. Regular monitoring and treatment can help manage symptoms effectively.",
+      description:
+          "Chronic inflammatory condition affecting oral tissues. Regular monitoring and treatment can help manage symptoms effectively.",
       severity: "Moderate Attention",
       severityColor: Color(0xFFFF9800),
     ),
     "OT": MedicalCondition(
       code: "OT",
       fullName: "Oral Thrush",
-      description: "Fungal infection in the mouth. Antifungal treatment is typically effective in resolving this condition completely.",
+      description:
+          "Fungal infection in the mouth. Antifungal treatment is typically effective in resolving this condition completely.",
       severity: "Low Attention",
       severityColor: Color(0xFF4CAF50),
     ),
@@ -156,14 +166,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Future<void> _initializeMLService() async {
     // 🔧 CRASH FIX: Check disposal before async work
     if (_isDisposed) return;
-    
+
     try {
       debugPrint("Initializing ML inference service...");
       await _mlService.initializeModels();
-      
+
       // 🔧 CRASH FIX: Check mounted after await
       if (!mounted || _isDisposed) return;
-      
+
       debugPrint("ML service initialized successfully");
     } catch (e) {
       debugPrint("Error initializing ML service: $e");
@@ -178,16 +188,17 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     // ============================================
     // Guard against: concurrent picks, analysis in progress, widget disposed
     if (_isPickingImage || _isAnalyzing || _isDisposed || !mounted) {
-      debugPrint("⚠️ _pickImage blocked: picking=$_isPickingImage, analyzing=$_isAnalyzing, disposed=$_isDisposed");
+      debugPrint(
+          "⚠️ _pickImage blocked: picking=$_isPickingImage, analyzing=$_isAnalyzing, disposed=$_isDisposed");
       return;
     }
-    
+
     _isPickingImage = true;
-    
+
     try {
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: source);
-      
+
       // ============================================
       // 🔧 CRASH FIX: Check mounted after await
       // ============================================
@@ -196,7 +207,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         debugPrint("⚠️ Widget disposed during image picking");
         return;
       }
-      
+
       if (image == null) {
         debugPrint("📷 No image selected");
         return;
@@ -218,10 +229,9 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
       if (!_isAnalyzing && mounted && !_isDisposed) {
         await _classifyImage(image.path);
       }
-      
     } catch (e) {
       debugPrint("❌ Error picking image: $e");
-      
+
       // 🔧 CRASH FIX: Safe error handling
       if (mounted && !_isDisposed) {
         setState(() {
@@ -244,10 +254,11 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     // 🔧 CRASH FIX: Prevent concurrent analysis
     // ============================================
     if (_isAnalyzing || !mounted || _isDisposed) {
-      debugPrint("⚠️ _classifyImage blocked: analyzing=$_isAnalyzing, disposed=$_isDisposed");
+      debugPrint(
+          "⚠️ _classifyImage blocked: analyzing=$_isAnalyzing, disposed=$_isDisposed");
       return;
     }
-    
+
     setState(() {
       _isAnalyzing = true;
       label = "Analyzing...";
@@ -263,7 +274,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
       // Run the two-stage ML inference pipeline
       final result = await _mlService.runInference(path);
-      
+
       // ============================================
       // 🔧 CRASH FIX: Check mounted after await
       // ============================================
@@ -279,13 +290,12 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
       // Process the result based on status
       _processMLResult(result);
-
     } catch (e) {
       // ============================================
       // 🔧 CRASH FIX: Safe error handling
       // ============================================
       if (!mounted || _isDisposed) return;
-      
+
       setState(() {
         _isAnalyzing = false;
         _currentResult = MLInferenceResult(
@@ -294,7 +304,8 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
           totalTime: Duration.zero,
         );
         label = "Analysis Error";
-        diseaseDescription = "An error occurred during image analysis: ${e.toString()}";
+        diseaseDescription =
+            "An error occurred during image analysis: ${e.toString()}";
         predictions = [];
         services = [];
       });
@@ -317,9 +328,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
       case MLInferenceStatus.noTeethDetected:
         setState(() {
-          label = "No Oral Issues Detected";
+          label = "Can't Recognize";
           confidence = result.validatorResult?.confidence ?? 0.0;
-          diseaseDescription = "The uploaded image does not appear to contain oral or dental content.";
+          diseaseDescription =
+              "The uploaded image does not appear to contain oral or dental content.";
           predictions = [];
           services = [];
         });
@@ -327,9 +339,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
       case MLInferenceStatus.lowConfidence:
         setState(() {
-          label = "Can't Recognize";
+          label = "Can't Classified";
           confidence = result.validatorResult?.confidence ?? 0.0;
-          diseaseDescription = "The image could not be confidently analyzed. Please upload a clear oral image.";
+          diseaseDescription =
+              "The image could not be confidently analyzed. Please upload a clear oral image.";
           predictions = [];
           services = [];
         });
@@ -337,9 +350,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
       case MLInferenceStatus.unsupportedDisease:
         setState(() {
-          label = "Can't Recognize";
+          label = "Can't Classified";
           confidence = result.diseaseResult?.confidence ?? 0.0;
-          diseaseDescription = "The detected condition is not part of the supported disease list.";
+          diseaseDescription =
+              "The detected condition is not part of the supported disease list.";
           predictions = [];
           services = [];
         });
@@ -349,13 +363,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         if (result.diseaseResult != null) {
           final diseaseResult = result.diseaseResult!;
           final condition = medicalConditions[diseaseResult.label];
-          
+
           if (condition != null) {
             setState(() {
               label = diseaseResult.label;
-              confidence = diseaseResult.confidence * 100; // Convert to percentage
+              confidence =
+                  diseaseResult.confidence * 100; // Convert to percentage
               diseaseDescription = condition.description;
-              
+
               // Create ModelPrediction for compatibility with existing UI
               predictions = [
                 ModelPrediction(
@@ -364,14 +379,16 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                 )
               ];
             });
-            
+
             // Fetch additional information
             _fetchDiseaseDescription(diseaseResult.label);
+            _fetchRecommendedServices(diseaseResult.label);
           } else {
             setState(() {
               label = "Unknown Condition";
               confidence = diseaseResult.confidence * 100;
-              diseaseDescription = "The detected condition is not in our medical database.";
+              diseaseDescription =
+                  "The detected condition is not in our medical database.";
               predictions = [];
               services = [];
             });
@@ -383,7 +400,8 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         setState(() {
           label = "Analysis Error";
           confidence = 0.0;
-          diseaseDescription = result.errorMessage ?? "An unknown error occurred during analysis.";
+          diseaseDescription = result.errorMessage ??
+              "An unknown error occurred during analysis.";
           predictions = [];
           services = [];
         });
@@ -398,8 +416,16 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     // 🔧 CRASH FIX: Early exit if disposed
     // ============================================
     if (_isDisposed || !mounted) return;
-    
+
     try {
+      // First check if there are any approved clinics
+      final clinicsResponse = await Supabase.instance.client
+          .from('clinics')
+          .select('clinic_id')
+          .eq('status', 'approved');
+
+      if (!mounted || _isDisposed) return;
+
       // First try to get from database
       final diseaseResponse = await Supabase.instance.client
           .from('disease')
@@ -417,108 +443,247 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
       if (diseaseResponse != null) {
         // Found in database
-        description = diseaseResponse['description'] ?? 'No description available.';
-        
-        final diseaseId = diseaseResponse['disease_id'];
-        final serviceResponse = await Supabase.instance.client
-            .from('services')
-            .select('service_name, service_price, clinic_id, status')
-            .eq('disease_id', diseaseId)
-            .eq('status', 'active');
+        description =
+            diseaseResponse['description'] ?? 'No description available.';
 
-        // ============================================
-        // 🔧 CRASH FIX: Check mounted after second await
-        // ============================================
-        if (!mounted || _isDisposed) return;
+        // Only fetch services if there are approved clinics
+        if (clinicsResponse.isNotEmpty) {
+          final approvedClinicIds = clinicsResponse
+              .map((clinic) => clinic['clinic_id'] as String)
+              .toList();
 
-        servicesList = List<Map<String, dynamic>>.from(serviceResponse);
+          final diseaseId = diseaseResponse['disease_id'];
+          final serviceResponse = await Supabase.instance.client
+              .from('services')
+              .select(
+                  'service_name, service_price, clinic_id, status, service_id, service_detail')
+              .eq('disease_id', diseaseId)
+              .eq('status', 'active')
+              .inFilter('clinic_id', approvedClinicIds);
+
+          // ============================================
+          // 🔧 CRASH FIX: Check mounted after second await
+          // ============================================
+          if (!mounted || _isDisposed) return;
+
+          servicesList = List<Map<String, dynamic>>.from(serviceResponse);
+        }
       } else {
         // Use medical condition data as fallback
         final condition = medicalConditions[diseaseName];
-        description = condition?.description ?? 'No description available for this condition.';
-        
-        // Generate some demo services
-        servicesList = _generateDemoServices(diseaseName);
+        description = condition?.description ??
+            'No description available for this condition.';
+
+        // Don't generate demo services - leave empty if no clinics
+        servicesList = [];
       }
 
       setState(() {
         diseaseDescription = description;
         services = servicesList;
       });
-
     } catch (e) {
       // ============================================
       // 🔧 CRASH FIX: Safe error handling
       // ============================================
       if (!mounted || _isDisposed) return;
-      
+
       // Fallback to medical condition data on error
       final condition = medicalConditions[diseaseName];
       setState(() {
-        diseaseDescription = condition?.description ?? 'Error retrieving disease information. Please consult a dental professional.';
-        services = _generateDemoServices(diseaseName);
+        diseaseDescription = condition?.description ??
+            'Error retrieving disease information. Please consult a dental professional.';
+        services = []; // Don't show demo services on error
       });
-      
+
       debugPrint("Error fetching disease info: $e");
     }
   }
 
-  List<Map<String, dynamic>> _generateDemoServices(String diseaseName) {
-    // Generate realistic demo services based on disease type
-    final baseServices = <Map<String, dynamic>>[];
-    
-    switch (diseaseName) {
-      case "Gum":
-        baseServices.addAll([
-          {'service_name': 'Professional Teeth Cleaning', 'service_price': '2500', 'clinic_id': 'demo_1'},
-          {'service_name': 'Gum Treatment', 'service_price': '3500', 'clinic_id': 'demo_2'},
-          {'service_name': 'Periodontal Therapy', 'service_price': '5000', 'clinic_id': 'demo_3'},
-        ]);
-        break;
-      case "CaS":
-        baseServices.addAll([
-          {'service_name': 'Dental Filling', 'service_price': '1500', 'clinic_id': 'demo_1'},
-          {'service_name': 'Root Canal Treatment', 'service_price': '8000', 'clinic_id': 'demo_2'},
-          {'service_name': 'Tooth Restoration', 'service_price': '4500', 'clinic_id': 'demo_3'},
-        ]);
-        break;
-      case "CoS":
-        baseServices.addAll([
-          {'service_name': 'Dental Scaling', 'service_price': '2000', 'clinic_id': 'demo_1'},
-          {'service_name': 'Deep Cleaning', 'service_price': '3000', 'clinic_id': 'demo_2'},
-        ]);
-        break;
-      default:
-        baseServices.addAll([
-          {'service_name': 'Dental Consultation', 'service_price': '800', 'clinic_id': 'demo_1'},
-          {'service_name': 'Oral Examination', 'service_price': '1200', 'clinic_id': 'demo_2'},
-          {'service_name': 'Treatment Planning', 'service_price': '1500', 'clinic_id': 'demo_3'},
-        ]);
+  Future<void> _fetchRecommendedServices(String detectedKey) async {
+    if (_isDisposed || !mounted) return;
+
+    try {
+      debugPrint("🔍 Fetching services for detected condition: $detectedKey");
+
+      // First check if there are any approved clinics
+      final clinicsResponse = await Supabase.instance.client
+          .from('clinics')
+          .select('clinic_id')
+          .eq('status', 'approved');
+
+      if (!mounted || _isDisposed) return;
+
+      // If no approved clinics exist, don't show any services
+      if (clinicsResponse.isEmpty) {
+        debugPrint("⚠️ No approved clinics found");
+        setState(() {
+          services = [];
+        });
+        return;
+      }
+
+      // Get clinic IDs for filtering services
+      final approvedClinicIds = clinicsResponse
+          .map((clinic) => clinic['clinic_id'] as String)
+          .toList();
+
+      debugPrint("✅ Found ${approvedClinicIds.length} approved clinics");
+
+      // Query services with clinic name included
+      // Fix: Use proper PostgreSQL array contains operator
+      final response = await Supabase.instance.client
+          .from('services')
+          .select(
+              'service_id, service_name, service_price, service_detail, clinic_id, medical_tags, clinics(clinic_name)')
+          .filter('medical_tags', 'cs',
+              '{$detectedKey}') // PostgreSQL array contains operator
+          .inFilter('clinic_id', approvedClinicIds)
+          .eq('status', 'active')
+          .eq('is_active', true);
+
+      debugPrint("🔍 Query executed: medical_tags contains '$detectedKey'");
+      debugPrint("📊 Raw response: $response");
+
+      if (!mounted || _isDisposed) return;
+
+      List<Map<String, dynamic>> servicesList =
+          List<Map<String, dynamic>>.from(response);
+
+      debugPrint(
+          "🎯 Found ${servicesList.length} matching services for condition: $detectedKey");
+
+      // If no services found with exact match, try broader search
+      if (servicesList.isEmpty) {
+        debugPrint("🔄 No exact matches found, trying broader search...");
+
+        // Try searching for services that might treat this condition
+        // Look for common dental service categories
+        final broadSearchTerms = _getBroadSearchTerms(detectedKey);
+
+        for (String searchTerm in broadSearchTerms) {
+          final broadResponse = await Supabase.instance.client
+              .from('services')
+              .select(
+                  'service_id, service_name, service_price, service_detail, clinic_id, medical_tags, clinics(clinic_name)')
+              .filter('medical_tags', 'cs', '{$searchTerm}')
+              .inFilter('clinic_id', approvedClinicIds)
+              .eq('status', 'active')
+              .eq('is_active', true);
+
+          debugPrint(
+              "🔍 Broad search query: medical_tags contains '$searchTerm'");
+          debugPrint("📊 Broad search response: $broadResponse");
+
+          if (broadResponse.isNotEmpty) {
+            servicesList = List<Map<String, dynamic>>.from(broadResponse);
+            debugPrint(
+                "✅ Found ${servicesList.length} services with broader search term: $searchTerm");
+            break;
+          }
+        }
+
+        // If still no results, try searching by service name/description
+        if (servicesList.isEmpty) {
+          debugPrint("🔄 Trying service name/description search...");
+          final nameSearchTerms = _getServiceNameSearchTerms(detectedKey);
+
+          for (String searchTerm in nameSearchTerms) {
+            final nameResponse = await Supabase.instance.client
+                .from('services')
+                .select(
+                    'service_id, service_name, service_price, service_detail, clinic_id, clinics(clinic_name)')
+                .or('service_name.ilike.%$searchTerm%,service_detail.ilike.%$searchTerm%,service_description.ilike.%$searchTerm%')
+                .inFilter('clinic_id', approvedClinicIds)
+                .eq('status', 'active')
+                .eq('is_active', true);
+
+            if (nameResponse.isNotEmpty) {
+              servicesList = List<Map<String, dynamic>>.from(nameResponse);
+              debugPrint(
+                  "✅ Found ${servicesList.length} services with name search: $searchTerm");
+              break;
+            }
+          }
+        }
+      }
+
+      setState(() {
+        services = servicesList;
+      });
+
+      if (servicesList.isEmpty) {
+        debugPrint("⚠️ No services found for condition: $detectedKey");
+      }
+    } catch (e) {
+      debugPrint("❌ Error fetching recommended services: $e");
+      // Set empty services on error instead of showing demo services
+      if (!mounted || _isDisposed) return;
+      setState(() {
+        services = [];
+      });
     }
-    
-    return baseServices;
+  }
+
+  /// Get broader search terms for a detected condition
+  List<String> _getBroadSearchTerms(String detectedKey) {
+    switch (detectedKey) {
+      case 'CaS': // Calculus
+        return ['cleaning', 'scaling', 'calculus', 'tartar', 'plaque'];
+      case 'CoS': // Caries
+        return ['filling', 'cavity', 'caries', 'restoration', 'decay'];
+      case 'Gum': // Gum disease
+        return ['gum', 'periodontal', 'gingivitis', 'cleaning', 'scaling'];
+      case 'MC': // Mouth Cancer
+        return ['oral', 'cancer', 'biopsy', 'screening', 'examination'];
+      case 'OC': // Oral Cancer
+        return ['oral', 'cancer', 'biopsy', 'screening', 'examination'];
+      case 'OLP': // Oral Lichen Planus
+        return ['oral', 'lichen', 'planus', 'treatment', 'medication'];
+      case 'OT': // Oral Thrush
+        return ['oral', 'thrush', 'fungal', 'antifungal', 'treatment'];
+      default:
+        return ['general', 'consultation', 'examination', 'checkup'];
+    }
+  }
+
+  /// Get service name search terms for a detected condition
+  List<String> _getServiceNameSearchTerms(String detectedKey) {
+    switch (detectedKey) {
+      case 'CaS': // Calculus
+        return ['cleaning', 'scaling', 'polish'];
+      case 'CoS': // Caries
+        return ['filling', 'restoration', 'composite'];
+      case 'Gum': // Gum disease
+        return ['gum', 'periodontal', 'deep cleaning'];
+      case 'MC': // Mouth Cancer
+      case 'OC': // Oral Cancer
+        return ['oral screening', 'cancer screening', 'biopsy'];
+      case 'OLP': // Oral Lichen Planus
+        return ['oral medicine', 'specialist consultation'];
+      case 'OT': // Oral Thrush
+        return ['oral medicine', 'antifungal'];
+      default:
+        return ['consultation', 'examination'];
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFB),
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text(
-          'AI Dental Scan Result',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: const Color(0xFF0D47A1),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PatientPage()),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: Text(
+          'AI Dental Scan Result',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
       ),
@@ -536,13 +701,13 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF0D47A1).withOpacity(0.1),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(60),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.camera_alt_outlined,
               size: 60,
-              color: Color(0xFF0D47A1),
+              color: AppTheme.primaryBlue,
             ),
           ),
           const SizedBox(height: 24),
@@ -551,7 +716,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: AppTheme.textDark,
             ),
           ),
           const SizedBox(height: 12),
@@ -562,7 +727,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                color: Color(0xFF6B7280),
+                color: AppTheme.textGrey,
                 height: 1.5,
               ),
             ),
@@ -628,7 +793,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildNoTeethDetectedCard(MLInferenceResult result) {
     return Card(
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -637,18 +802,18 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
+                color: AppTheme.successColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(50),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.check_circle_outline,
                 size: 48,
-                color: Color(0xFF10B981),
+                color: AppTheme.successColor,
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'No Oral Issues Detected',
+              'Can\'t Recognize',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -661,7 +826,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               'The uploaded image does not appear to contain oral or dental content.',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: AppTheme.textGrey,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -685,7 +850,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildLowConfidenceCard(MLInferenceResult result) {
     return Card(
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -694,7 +859,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(50),
               ),
               child: const Icon(
@@ -718,7 +883,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               'The image could not be confidently analyzed. Please upload a clear oral image.',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: AppTheme.textGrey,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -742,7 +907,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildUnsupportedDiseaseCard(MLInferenceResult result) {
     return Card(
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -751,7 +916,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(50),
               ),
               child: const Icon(
@@ -775,7 +940,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               'The detected condition is not part of the supported disease list.',
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: AppTheme.textGrey,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -786,7 +951,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                 'Detected: ${result.diseaseResult!.label} (${(result.diseaseResult!.confidence * 100).toStringAsFixed(1)}%)',
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF9CA3AF),
+                  color: AppTheme.textGrey,
                 ),
               ),
             ],
@@ -798,10 +963,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
   Widget _buildSuccessResultCard(MLInferenceResult result) {
     if (result.diseaseResult == null) return const SizedBox.shrink();
-    
+
     final diseaseResult = result.diseaseResult!;
     final condition = medicalConditions[diseaseResult.label];
-    
+
     if (condition == null) return const SizedBox.shrink();
 
     return Column(
@@ -810,7 +975,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         const SizedBox(height: 16),
         _buildDescriptionCard(),
         const SizedBox(height: 16),
-        if (services.isNotEmpty) _buildServicesSection(),
+        _buildServicesSection(),
         const SizedBox(height: 16),
         _buildDisclaimerCard(),
       ],
@@ -820,7 +985,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildErrorCard(MLInferenceResult result) {
     return Card(
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -829,13 +994,13 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.1),
+                color: AppTheme.errorColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(50),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.error_outline,
                 size: 48,
-                color: Color(0xFFEF4444),
+                color: AppTheme.errorColor,
               ),
             ),
             const SizedBox(height: 20),
@@ -844,16 +1009,17 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A1A),
+                color: AppTheme.textDark,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              result.errorMessage ?? 'An unknown error occurred during analysis.',
+              result.errorMessage ??
+                  'An unknown error occurred during analysis.',
               style: const TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: AppTheme.textGrey,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -867,7 +1033,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildAnalyzingCard() {
     return Card(
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -877,7 +1043,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               width: 48,
               height: 48,
               child: CircularProgressIndicator(
-                color: Color(0xFF0D47A1),
+                color: AppTheme.primaryBlue,
                 strokeWidth: 3,
               ),
             ),
@@ -887,7 +1053,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: AppTheme.textDark,
               ),
             ),
             const SizedBox(height: 8),
@@ -909,7 +1075,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildImageCard() {
     return Card(
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: double.infinity,
@@ -920,8 +1086,8 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(0xFF0D47A1).withOpacity(0.05),
-              const Color(0xFF1976D2).withOpacity(0.05),
+              AppTheme.primaryBlue.withValues(alpha: 0.05),
+              AppTheme.accentBlue.withValues(alpha: 0.05),
             ],
           ),
         ),
@@ -934,14 +1100,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                 )
               : Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D47A1).withOpacity(0.1),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
                       Icons.image_outlined,
                       size: 80,
-                      color: Color(0xFF0D47A1),
+                      color: AppTheme.primaryBlue,
                     ),
                   ),
                 ),
@@ -952,7 +1118,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
   Widget _buildPrimaryDiagnosisCard() {
     if (predictions.isEmpty) return const SizedBox.shrink();
-    
+
     final prediction = predictions.first;
     final condition = medicalConditions[prediction.label];
 
@@ -960,7 +1126,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
     return Card(
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -972,12 +1138,12 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D47A1).withOpacity(0.1),
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.medical_services_outlined,
-                    color: Color(0xFF0D47A1),
+                    color: AppTheme.primaryBlue,
                     size: 24,
                   ),
                 ),
@@ -990,7 +1156,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                         'Primary Diagnosis',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF6B7280),
+                          color: AppTheme.textGrey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1000,7 +1166,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A1A),
+                          color: AppTheme.textDark,
                         ),
                       ),
                     ],
@@ -1012,10 +1178,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: condition.severityColor.withOpacity(0.1),
+                color: condition.severityColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: condition.severityColor.withOpacity(0.3),
+                  color: condition.severityColor.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -1043,13 +1209,13 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                 Expanded(
                   child: LinearProgressIndicator(
                     value: prediction.confidence / 100,
-                    backgroundColor: Colors.grey.withOpacity(0.2),
+                    backgroundColor: Colors.grey.withValues(alpha: 0.2),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       prediction.confidence >= 80
-                          ? const Color(0xFF10B981)
+                          ? AppTheme.successColor
                           : prediction.confidence >= 60
-                              ? const Color(0xFFF59E0B)
-                              : const Color(0xFFEF4444),
+                              ? AppTheme.warningColor
+                              : AppTheme.errorColor,
                     ),
                     minHeight: 8,
                   ),
@@ -1060,7 +1226,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: AppTheme.textDark,
                   ),
                 ),
               ],
@@ -1073,7 +1239,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
   Widget _buildAlternativeDiagnosisSection() {
     if (predictions.length <= 1) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1082,7 +1248,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: AppTheme.textDark,
           ),
         ),
         const SizedBox(height: 12),
@@ -1091,21 +1257,21 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
           runSpacing: 8,
           children: predictions.skip(1).take(2).map((prediction) {
             final condition = medicalConditions[prediction.label];
-            
+
             if (condition == null) return const SizedBox.shrink();
-            
+
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFFE5E7EB),
+                  color: AppTheme.dividerColor,
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -1142,7 +1308,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildDescriptionCard() {
     return Card(
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1151,18 +1317,18 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.info_outline,
-                  color: Color(0xFF0D47A1),
+                  color: AppTheme.primaryBlue,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Medical Information',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
+                    color: AppTheme.textDark,
                   ),
                 ),
               ],
@@ -1172,7 +1338,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               diseaseDescription,
               style: const TextStyle(
                 fontSize: 14,
-                color: Color(0xFF4B5563),
+                color: AppTheme.textGrey,
                 height: 1.6,
               ),
             ),
@@ -1184,26 +1350,72 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
 
   Widget _buildServicesSection() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Recommended Services',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: AppTheme.textDark,
           ),
         ),
         const SizedBox(height: 12),
-        ...services.map((service) => _buildServiceCard(service)),
+        if (services.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.softBlue,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.dividerColor),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.medical_services_outlined,
+                    color: AppTheme.textGrey, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  "No clinics available yet",
+                  style: TextStyle(
+                      color: AppTheme.textDark, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Please wait for clinics to register and get approved by admin.",
+                  style: TextStyle(color: AppTheme.textGrey, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () {
+                    // Navigate to patient dashboard properly
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const PatientMainLayout()),
+                      (route) => false,
+                    );
+                  },
+                  child: const Text("Go to Dashboard"),
+                )
+              ],
+            ),
+          )
+        else
+          ...services.map((service) => _buildServiceCard(service)),
       ],
     );
   }
 
   Widget _buildServiceCard(Map<String, dynamic> service) {
+    // Extract clinic name from joined data
+    final clinicData = service['clinics'] as Map<String, dynamic>?;
+    final clinicName =
+        clinicData?['clinic_name'] as String? ?? 'Unknown Clinic';
+
     return Card(
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -1211,12 +1423,12 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withOpacity(0.1),
+            color: AppTheme.successColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.medical_services,
-            color: Color(0xFF10B981),
+            color: AppTheme.successColor,
             size: 24,
           ),
         ),
@@ -1225,32 +1437,70 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: AppTheme.textDark,
           ),
         ),
-        subtitle: Text(
-          'Price: ₱${service['service_price']}',
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF6B7280),
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.local_hospital,
+                    size: 14, color: AppTheme.primaryBlue),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    clinicName,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.primaryBlue,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              CurrencyFormatter.formatPesoWithText(service['service_price']),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textGrey,
+              ),
+            ),
+          ],
         ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          color: Color(0xFF9CA3AF),
-          size: 16,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text("Book Now",
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12)),
         ),
         onTap: () {
           // ============================================
           // 🔧 CRASH FIX: Check mounted before navigation
           // ============================================
           if (!mounted || _isDisposed) return;
-          
+
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PatientClinicInfoPage(
-                clinicId: service['clinic_id'],
+              builder: (context) => PatientBookingPage(
+                clinicId: service['clinic_id'].toString(),
+                serviceId: service['service_id']?.toString() ?? 'unknown',
+                serviceName: service['service_name'].toString(),
+                servicePrice: service['service_price'].toString(),
+                serviceDetail: service['service_detail']?.toString() ??
+                    'No description available',
               ),
             ),
           );
@@ -1262,7 +1512,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
   Widget _buildStatusCard() {
     return Card(
       elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1276,10 +1526,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                       : Icons.check_circle_outline,
               size: 48,
               color: label.contains('Error') || label.contains('Invalid')
-                  ? const Color(0xFFEF4444)
+                  ? AppTheme.errorColor
                   : label.contains('Analyzing')
-                      ? const Color(0xFF0D47A1)
-                      : const Color(0xFF10B981),
+                      ? AppTheme.primaryBlue
+                      : AppTheme.successColor,
             ),
             const SizedBox(height: 16),
             Text(
@@ -1287,7 +1537,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: AppTheme.textDark,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1311,10 +1561,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF3C7),
+        color: AppTheme.warningColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFF59E0B).withOpacity(0.3),
+          color: AppTheme.warningColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -1323,7 +1573,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
         children: [
           Icon(
             Icons.warning_amber_outlined,
-            color: const Color(0xFFF59E0B),
+            color: AppTheme.warningColor,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -1336,7 +1586,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF92400E),
+                    color: AppTheme.textDark,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1344,7 +1594,7 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
                   'This result is AI-assisted and not a medical diagnosis. Please consult a qualified dental professional for proper evaluation and treatment.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF92400E),
+                    color: AppTheme.textGrey,
                     height: 1.4,
                   ),
                 ),
@@ -1363,14 +1613,14 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     // 🔧 CRASH FIX: Disable buttons during operations
     // ============================================
     final bool buttonsDisabled = _isAnalyzing || _isPickingImage;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1382,17 +1632,19 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 // 🔧 CRASH FIX: Disable button during operations
-                onPressed: buttonsDisabled ? null : () => _pickImage(ImageSource.gallery),
+                onPressed: buttonsDisabled
+                    ? null
+                    : () => _pickImage(ImageSource.gallery),
                 icon: const Icon(Icons.photo_library_outlined),
                 label: const Text('Upload'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: buttonsDisabled 
-                      ? const Color(0xFF9CA3AF) 
-                      : const Color(0xFF0D47A1),
+                  foregroundColor: buttonsDisabled
+                      ? AppTheme.textGrey
+                      : AppTheme.primaryBlue,
                   side: BorderSide(
-                    color: buttonsDisabled 
-                        ? const Color(0xFF9CA3AF) 
-                        : const Color(0xFF0D47A1),
+                    color: buttonsDisabled
+                        ? AppTheme.textGrey
+                        : AppTheme.primaryBlue,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -1405,13 +1657,15 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 // 🔧 CRASH FIX: Disable button during operations
-                onPressed: buttonsDisabled ? null : () => _pickImage(ImageSource.camera),
+                onPressed: buttonsDisabled
+                    ? null
+                    : () => _pickImage(ImageSource.camera),
                 icon: const Icon(Icons.camera_alt_outlined),
                 label: const Text('Camera'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: buttonsDisabled 
-                      ? const Color(0xFF9CA3AF) 
-                      : const Color(0xFF0D47A1),
+                  backgroundColor: buttonsDisabled
+                      ? AppTheme.textGrey
+                      : AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -1437,10 +1691,10 @@ class _ImageClassifierScreenState extends State<ImageClassifierScreen> {
     _isDisposed = true;
     _isPickingImage = false;
     _isAnalyzing = false;
-    
+
     // Clean up ML service resources
     _mlService.dispose();
-    
+
     super.dispose();
   }
 }

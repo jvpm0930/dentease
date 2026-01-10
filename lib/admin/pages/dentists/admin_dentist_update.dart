@@ -21,7 +21,7 @@ class _AdmEditDentistPageState extends State<AdmEditDentistPage> {
   String selectedRole = 'user';
 
   bool isLoading = true;
-  static const kPrimary = Color(0xFF103D7E);
+  static const kPrimary = Color(0xFF1134A6);
 
   @override
   void initState() {

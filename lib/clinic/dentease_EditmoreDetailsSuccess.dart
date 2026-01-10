@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:dentease/clinic/dentease_moreDetails.dart';
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,8 +25,6 @@ class _EditDetailsSuccessState extends State<EditDetailsSuccess>
   late final AnimationController _controller;
 
   final supabase = Supabase.instance.client; // <<< FIXED
-
-  static const Color kPrimary = Color(0xFF103D7E);
 
   @override
   void initState() {
@@ -88,7 +87,6 @@ class _EditDetailsSuccessState extends State<EditDetailsSuccess>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: 22),
-
                     _PillButton(
                       label: "Notify Admin (Resubmit)",
                       onTap: _sendNotifySignal,
@@ -98,12 +96,9 @@ class _EditDetailsSuccessState extends State<EditDetailsSuccess>
                     _PillButton(
                       label: "Done",
                       onTap: _backToHome,
-                      color: kPrimary,
+                      color: AppTheme.primaryBlue,
                     ),
-
-
                     const SizedBox(height: 10),
-
                   ],
                 ),
               ),
@@ -130,9 +125,10 @@ class _GlassCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.90),
+            color: Colors.white.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6), width: 1),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x1A000000),
@@ -147,6 +143,7 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
+
 class _PillButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;

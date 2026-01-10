@@ -1,3 +1,4 @@
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -16,7 +17,8 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
   LatLng? selectedPosition;
   GoogleMapController? mapController;
   String? actualAddress;
-  final String apiKey ='AIzaSyB_wMaSJqbHeIY2ruwHRLhOerBXzbefnRg'; // Replace with your API key
+  final String apiKey =
+      'AIzaSyB_wMaSJqbHeIY2ruwHRLhOerBXzbefnRg'; // Replace with your API key
 
   // Tagum City boundaries (approximate)
   final LatLng southwestBoundary = LatLng(7.382, 125.736); // Bottom-left corner
@@ -69,6 +71,8 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: Colors.white,
         title: const Text('Pick Address - Tagum City Only'),
       ),
       body: Stack(
@@ -112,11 +116,11 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.cardBackground,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black26,
+                      color: AppTheme.shadowMedium,
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -152,7 +156,6 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
           ),
         ),
       ),
-
     );
   }
 }

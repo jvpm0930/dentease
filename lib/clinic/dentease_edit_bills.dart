@@ -1,4 +1,5 @@
 import 'package:dentease/widgets/background_cont.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -159,8 +160,6 @@ class _EditBillPageState extends State<EditBillPage> {
 
   @override
   Widget build(BuildContext context) {
-    const kPrimary = Color(0xFF103D7E);
-
     return BackgroundCont(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -333,7 +332,7 @@ class _EditBillPageState extends State<EditBillPage> {
                       child: ElevatedButton(
                         onPressed: _updateBill,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary,
+                          backgroundColor: AppTheme.primaryBlue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -383,7 +382,7 @@ class _EditBillPageState extends State<EditBillPage> {
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF103D7E)),
+        prefixIcon: Icon(icon, color: AppTheme.primaryBlue),
         filled: true,
         fillColor: Colors.white,
         contentPadding:
@@ -391,7 +390,7 @@ class _EditBillPageState extends State<EditBillPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppTheme.dividerColor),
         ),
       ),
     );
@@ -409,16 +408,10 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: AppTheme.dividerColor),
+        boxShadow: AppTheme.cardShadow,
       ),
       child: child,
     );
@@ -432,15 +425,14 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF103D7E);
     return Row(
       children: [
-        Icon(icon, color: color),
+        Icon(icon, color: AppTheme.primaryBlue),
         const SizedBox(width: 8),
         Text(
           title,
           style: const TextStyle(
-            color: Colors.black87,
+            color: AppTheme.textDark,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),

@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'package:dentease/clinic/models/patient_clinicchat_list.dart';
 import 'package:dentease/clinic/scanner/imangeScanner.dart';
-import 'package:dentease/patients/patient_booking_pend.dart';
-import 'package:dentease/patients/patient_pagev2.dart';
+import 'package:dentease/logic/safe_navigator.dart';
+import 'package:dentease/patients/patient_appointments.dart';
+import 'package:dentease/patients/patient_main_layout.dart';
 import 'package:dentease/patients/patient_profile.dart';
+import 'package:dentease/services/messaging_service.dart';
+import 'package:dentease/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 🟢 Added
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Initialize notifications
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -53,10 +56,14 @@ class PatientFooter extends StatefulWidget {
 }
 
 class _PatientFooterState extends State<PatientFooter> {
-  final supabase = Supabase.instance.client;
+  // Use getter to avoid race condition with Supabase initialization
+  SupabaseClient get supabase => Supabase.instance.client;
+  final MessagingService _messagingService = MessagingService();
+
   bool hasUnreadMessages = false;
   bool hasApprovedBookings = false;
   Timer? refreshTimer;
+  StreamSubscription? _unreadSubscription;
 
   Set<String> notifiedMessageIds = {};
   Set<String> notifiedApprovedBookingIds = {};
@@ -65,14 +72,26 @@ class _PatientFooterState extends State<PatientFooter> {
   void initState() {
     super.initState();
     initNotifications();
-    _loadNotifiedIds(); // 🟢 Load saved IDs on startup
-    fetchUnreadMessages();
+    _loadNotifiedIds();
+
+    // Use Stream for real-time chat badges
+    _unreadSubscription = _messagingService
+        .streamTotalUnreadCount(widget.patientId)
+        .listen((count) {
+      if (mounted) {
+        setState(() {
+          hasUnreadMessages = count > 0;
+        });
+      }
+    });
+
     fetchApprovedBookings();
     startAutoRefresh();
   }
 
   @override
   void dispose() {
+    _unreadSubscription?.cancel();
     stopAutoRefresh();
     super.dispose();
   }
@@ -98,8 +117,8 @@ class _PatientFooterState extends State<PatientFooter> {
   }
 
   void startAutoRefresh() {
-    refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      await fetchUnreadMessages();
+    // Reduce polling frequency since we use streams for messages
+    refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       await fetchApprovedBookings();
     });
   }
@@ -193,118 +212,104 @@ class _PatientFooterState extends State<PatientFooter> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: 30,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF103D7E), // solid blue (#103D7E)
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavImage(
-                    'assets/icons/home.png', context, const PatientPage()),
-
-                // Booking icon with red dot if approved
-                IconButton(
-                  iconSize: 35,
-                  icon: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/icons/calendar.png',
-                        width: 32,
-                        height: 32,
-                        color: Colors.white,
-                      ),
-                      if (hasApprovedBookings)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 13,
-                            height: 13,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            PatientBookingPend(patientId: widget.patientId),
-                      ),
-                    );
-                  },
-                ),
-
-                _buildNavImage('assets/icons/scan.png', context,
-                    const ImageClassifierScreen()),
-
-                // Chat icon with unread indicator
-                IconButton(
-                  iconSize: 35,
-                  icon: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/icons/chat.png',
-                        width: 32,
-                        height: 32,
-                        color: Colors.white,
-                      ),
-                      if (hasUnreadMessages)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 13,
-                            height: 13,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            PatientClinicChatList(patientId: widget.patientId),
-                      ),
-                    );
-                  },
-                ),
-
-                _buildNavImage('assets/icons/profile.png', context,
-                    PatientProfile(patientId: widget.patientId)),
-              ],
-            ),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlue,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: Offset(0, 4),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Home button - uses pushAndRemoveUntil to clear stack
+          _buildHomeButton('assets/icons/home.png', context),
+
+          // Booking icon with red dot if approved
+          IconButton(
+            iconSize: 30,
+            icon: Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.asset(
+                  'assets/icons/calendar.png',
+                  width: 26,
+                  height: 26,
+                  color: Colors.white,
+                ),
+                if (hasApprovedBookings)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 13,
+                      height: 13,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: () {
+              SafeNavigator.push(
+                context,
+                PatientAppointments(patientId: widget.patientId),
+              );
+            },
+          ),
+
+          _buildNavImage(
+              'assets/icons/scan.png', context, const ImageClassifierScreen()),
+
+          // Chat icon with unread indicator
+          IconButton(
+            iconSize: 30,
+            icon: Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.asset(
+                  'assets/icons/chat.png',
+                  width: 26,
+                  height: 26,
+                  color: Colors.white,
+                ),
+                if (hasUnreadMessages)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 13,
+                      height: 13,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: () {
+              SafeNavigator.push(
+                context,
+                PatientClinicChatList(patientId: widget.patientId),
+              );
+            },
+          ),
+
+          _buildNavImage('assets/icons/profile.png', context,
+              PatientProfile(patientId: widget.patientId)),
+        ],
+      ),
     );
   }
 
@@ -312,12 +317,32 @@ class _PatientFooterState extends State<PatientFooter> {
     return IconButton(
       icon: Image.asset(
         imagePath,
-        width: 30,
-        height: 30,
+        width: 26,
+        height: 26,
         color: Colors.white,
       ),
       onPressed: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+        SafeNavigator.push(context, page);
+      },
+    );
+  }
+
+  /// Special home button that clears navigation stack
+  Widget _buildHomeButton(String imagePath, BuildContext context) {
+    return IconButton(
+      icon: Image.asset(
+        imagePath,
+        width: 26,
+        height: 26,
+        color: Colors.white,
+      ),
+      onPressed: () {
+        // Clear entire stack and go to home
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const PatientMainLayout()),
+          (route) => false,
+        );
       },
     );
   }
