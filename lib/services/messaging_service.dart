@@ -35,8 +35,23 @@ class MessagingService {
               .inFilter('conversation_id', conversationIds)
               .order('last_message_at', ascending: false);
 
+          // Filter out conversations where clinic has no active staff
+          final filteredConversations = <Map<String, dynamic>>[];
+          for (var conv in conversations) {
+            final clinicId = conv['clinic_id'] as String?;
+            if (clinicId == null) {
+              // Direct conversations, include
+              filteredConversations.add(conv);
+            } else {
+              // Check if clinic has active staff
+              if (await _clinicHasActiveStaff(clinicId)) {
+                filteredConversations.add(conv);
+              }
+            }
+          }
+
           // Merge with participant data (unread counts, etc.)
-          return conversations.map((conv) {
+          return filteredConversations.map((conv) {
             final participant = participants.firstWhere(
               (p) => p['conversation_id'] == conv['conversation_id'],
               orElse: () => {},
@@ -59,7 +74,24 @@ class MessagingService {
         'get_user_conversations',
         params: {'p_user_id': userId},
       );
-      return List<Map<String, dynamic>>.from(result ?? []);
+      final conversations = List<Map<String, dynamic>>.from(result ?? []);
+
+      // Filter out conversations where clinic has no active staff
+      final filteredConversations = <Map<String, dynamic>>[];
+      for (var conv in conversations) {
+        final clinicId = conv['clinic_id'] as String?;
+        if (clinicId == null) {
+          // Direct conversations, include
+          filteredConversations.add(conv);
+        } else {
+          // Check if clinic has active staff
+          if (await _clinicHasActiveStaff(clinicId)) {
+            filteredConversations.add(conv);
+          }
+        }
+      }
+
+      return filteredConversations;
     } catch (e) {
       debugPrint('Error fetching conversations: $e');
       return [];
@@ -591,6 +623,23 @@ class MessagingService {
       return result?['sender_role'];
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Check if a clinic has at least one active staff member (not on leave)
+  Future<bool> _clinicHasActiveStaff(String clinicId) async {
+    try {
+      final result = await _supabase
+          .from('staffs')
+          .select('staff_id')
+          .eq('clinic_id', clinicId)
+          .eq('is_on_leave', false)
+          .limit(1)
+          .maybeSingle();
+      return result != null;
+    } catch (e) {
+      debugPrint('Error checking active staff: $e');
+      return true; // Default to showing if error
     }
   }
 }

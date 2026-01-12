@@ -34,9 +34,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
   int todayBookings = 0;
   int pendingBookings = 0;
   bool isLoading = true;
-  int unreadMessagesCount = 0;
-  String? latestMessageSender;
-  String? latestMessageContent;
 
   // Real-time subscription for pending bookings
   StreamSubscription? _bookingSubscription;
@@ -182,51 +179,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
 
       pendingBookings = pendingData.length;
 
-      // Fetch unread messages count for this staff
-      // Use widget.staffId as that's what's stored in the conversation_participants
-      final staffUserId = widget.staffId;
-      
-      final participantsData = await supabase
-          .from('conversation_participants')
-          .select('unread_count, conversation_id')
-          .eq('user_id', staffUserId);
-
-      unreadMessagesCount = participantsData.fold<int>(
-          0, (sum, p) => sum + ((p['unread_count'] as int?) ?? 0));
-
-      // Reset message details
-      latestMessageSender = null;
-      latestMessageContent = null;
-
-      // Get latest unread message if any (only from others, not self)
-      if (unreadMessagesCount > 0 && participantsData.isNotEmpty) {
-        // Find conversation with unread messages
-        final unreadConv = participantsData.firstWhere(
-          (p) => (p['unread_count'] as int? ?? 0) > 0,
-          orElse: () => participantsData.first,
-        );
-        final convId = unreadConv['conversation_id'];
-        
-        // Get the latest message from someone OTHER than current staff
-        final latestMsg = await supabase
-            .from('messages')
-            .select('sender_id, sender_name, content')
-            .eq('conversation_id', convId)
-            .neq('sender_id', staffUserId)
-            .order('created_at', ascending: false)
-            .limit(1)
-            .maybeSingle();
-
-        // Only set if we have a valid message from someone else with a proper name
-        if (latestMsg != null && 
-            latestMsg['sender_id'] != staffUserId &&
-            latestMsg['sender_name'] != null &&
-            latestMsg['sender_name'].toString().isNotEmpty &&
-            latestMsg['sender_name'].toString().toLowerCase() != 'me') {
-          latestMessageSender = latestMsg['sender_name'];
-          latestMessageContent = latestMsg['content'];
-        }
-      }
     } catch (e) {
       debugPrint('Error fetching staff data: $e');
     } finally {
@@ -258,13 +210,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
                         padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
                         child: _buildWelcomeHeader(),
                       ),
-
-                      // Unread Message Banner (only show when there's a valid message from someone else)
-                      if (unreadMessagesCount > 0 && latestMessageSender != null)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          child: _buildMessageBanner(),
-                        ),
 
                       // Quick Stats
                       Padding(
@@ -622,80 +567,6 @@ class _StaffHomePageState extends State<StaffHomePage> {
               Icons.arrow_forward_ios_rounded,
               color: AppTheme.textGrey.withValues(alpha: 0.5),
               size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageBanner() {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to chat - using the layout's onTabChange
-        // Assuming chat is at index 2 in staff_main_layout
-        Navigator.of(context).pop(); // Pop current page if needed
-        // The main layout will show chat tab
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF9C27B0).withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Message from ${latestMessageSender ?? "Patient"}',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    latestMessageContent ?? 'You have new messages',
-                    style: GoogleFonts.roboto(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 14,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'View',
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFF9C27B0),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
